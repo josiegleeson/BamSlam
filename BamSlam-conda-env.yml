@@ -1,0 +1,12 @@
+name: BamSlam_env
+channels:
+  - r
+  - anaconda
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+- r=3.6.0=r36_0
+- r-base=3.6.1=h9bb98a2_1
+- r-biocmanager=1.30.10=r36h6115d3f_1
+- r-dplyr=0.8.0.1=r36h29659fb_0
