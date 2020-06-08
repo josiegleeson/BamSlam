@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Shell script that calls Rscript
+# Written by Josie Gleeson 2020
+
+BAM=$1
+ANNOTATION=$2
+OUTPREF=$3
+
+Rscript BamSlam.R $BAM $ANNOTATION $OUTPREF
+
+samtools view -h -o ${OUTPREF}.sam $BAM
+grep '^@' ${OUTPREF}.sam > ${OUTPREF}_header.txt
+cat ${OUTPREF}_header.txt ${OUTPREF}_pre_filtered.sam > ${OUTPREF}_filtered.sam
+rm ${OUTPREF}_header.txt
+
+
