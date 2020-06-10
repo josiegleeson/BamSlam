@@ -1,5 +1,4 @@
 # Written by Josie Gleeson 2020 
-# Replace sample1 with your file name or sample name
 # Usage: Rscript BamSlam.R yourfile.bam gencode.gtf ouputprefix
 
 # GenomicAlignments/Features package is from bioconductor, need to install bioconductor then run:
@@ -45,7 +44,7 @@ main <- function() {
     dplyr::mutate(accuracy=(nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD))
   
   # Make the txdb
-  txs <- makeTxDbFromGFF("gencode.v31.annotation.gtf", format="gtf")
+  txs <- makeTxDbFromGFF(gtffile, format="gtf")
   txLengths <- transcriptLengths(txs, with.cds_len=TRUE, with.utr5_len=TRUE, with.utr3_len=TRUE)
   lengths <- data.frame(txLengths$tx_name, txLengths$tx_len)
   bam_data$seqnames <- as.character(bam_data$seqnames)
@@ -72,9 +71,8 @@ main <- function() {
   bam_filtered <- bam_data %>% 
     dplyr::filter(strand == "+")
   
-  bam_filtered <- bam_filtered %>% 
-    group_by(qname) %>% 
-    dplyr::filter((end <= txLengths.tx_len) &&  (end > txLengths.tx_len - 100)) 
+  bam_filtered <- bam_data %>% 
+    dplyr::filter(end > (txLengths.tx_len - 100))
   
   bam_filtered <- bam_filtered %>% 
     group_by(qname) %>% 
@@ -92,18 +90,36 @@ main <- function() {
     filter(accuracy / max(accuracy) >= 0.9)
   
   # Export file as a sam file
-  bam_export <- subset(bam_filtered, select=c("qname", "flag", "transcript", "start", "mapq", "cigar", "seq", "qual"))
+  bam_export <- subset(bam_filtered, select=c("qname", "flag", "transcript", "start", "mapq", "cigar", "seq", "qual", "AS"))
   bam_export <- bam_export %>% 
-    dplyr::mutate(rnext="*", pnext=0, tlen=0)
+    dplyr::mutate(rnext="*", pnext=0, tlen=0, AStext="AS:i:")
   
-  col_order <- c("qname", "flag", "transcript", "start", "mapq", "cigar", "rnext", "pnext", "tlen", "seq", "qual")
+  # Add back in the AS to each alignment
+  bam_export <- transform(bam_export, newcol=paste(AStext, AS, sep=""))
+  
+  col_order <- c("qname", "flag", "transcript", "start", "mapq", "cigar", "rnext", "pnext", "tlen", "seq", "qual", "newcol")
   bam_export <- bam_export[, col_order]
   
   bam_export$seq[bam_export$seq==""]<-"*"
   bam_export$qual[bam_export$qual==""]<-"*"
   
+  # Quantify
+  bam_counts <- bam_filtered %>% 
+    group_by(qname) %>% 
+    dplyr::mutate(readcount = 1/n())
+  
+  bam_counts <- bam_counts %>% 
+    group_by(transcript) %>% 
+    tally(readcount)
+  
+  bam_count_export <- merge(txLengths, bam_counts, by.x="tx_name", by.y="transcript", all.x=TRUE)
+  bam_count_export <- subset(bam_count_export, select=c("tx_name", "n"))
+  bam_count_export$n[is.na(bam_count_export$n)] <- 0
+  colnames(bam_count_export) <- c("transcript", "nreads")
+  write.table(bam_count_export, file= paste0(output, "_filtered_quant.txt"), sep="\t", quote=FALSE, col.names = TRUE, row.names = FALSE)
+  
   # Export files
-  write.csv(bam_data, file = paste0(output, "_data.csv"), quote=F, col.names = F) 
+  write.table(bam_data, file = paste0(output, "_data.txt"), sep="\t", quote=F, col.names = T, row.names=F) 
   write.table(bam_export, file = paste0(output, "_pre_filtered.sam"), sep="\t", quote=F, col.names = F, row.names = F)
 
   bam_primary <- subset(bam_data, tp == "P")
@@ -141,3 +157,6 @@ main <- function() {
 }
 
 main()
+
+
+
