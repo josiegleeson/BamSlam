@@ -1,5 +1,5 @@
 # BamSlam
-This script was written for Oxford Nanopore Technologies' direct RNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output important statistics ad output plots from your alignment data.
+This script was written for Oxford Nanopore Technologies' direct RNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output important statistics and plots from your alignment data.
 
 ## Inputs:
 To obtain a bam file align your FASTQ/FASTA files to the transcriptome with minimap2 (minimap2 -ax map-ont -N 100). Then discard unampped and supplementary alignments with samtools (samtools view -hb -F 2052 in.bam > out.bam). You will also need a GTF annotation file. 
