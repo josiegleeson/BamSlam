@@ -1,4 +1,5 @@
-# Written by Josie Gleeson 2020 
+
+# Replace sample1 with your file name or sample name
 # Usage: Rscript BamSlam.R yourfile.bam gencode.gtf ouputprefix
 
 # GenomicAlignments/Features package is from bioconductor, need to install bioconductor then run:
@@ -17,6 +18,8 @@ main <- function() {
     library(ggplot2)
     library(data.table)
     library(tidyr)
+    library(MASS)
+    library(viridis)
   })
   
   # Import bam
@@ -24,7 +27,6 @@ main <- function() {
                          param = ScanBamParam(tag = c("NM", "AS", "tp"),
                                               what = c("qname","flag", "rname", 
                                                        "pos", "mapq", "seq", "qual")))
-  # Start building csv data
   # Expand cigar strings
   ops <- GenomicAlignments::CIGAR_OPS
   wdths <- GenomicAlignments::explodeCigarOpLengths(cigar(bam), ops = ops)
@@ -68,16 +70,16 @@ main <- function() {
     dplyr::mutate(coverage=width/txLengths.tx_len)
   
   # Filter 
-  bam_filtered <- bam_data %>% 
+  bam_data <- bam_data %>% 
     dplyr::filter(strand == "+")
   
-  bam_filtered <- bam_data %>% 
-    dplyr::filter(end > (txLengths.tx_len - 100))
+  #bam_filtered <- bam_data %>% 
+    #dplyr::filter(end > (txLengths.tx_len - 100))
   
-  bam_filtered <- bam_filtered %>% 
+  bam_filtered <- bam_data %>% 
     group_by(qname) %>% 
     arrange(qname, desc(AS)) %>% 
-    filter(AS / max(AS) >= 0.98)
+    filter(AS / max(AS) >= 0.9)
   
   bam_filtered <- bam_filtered %>% 
     group_by(qname) %>% 
@@ -88,39 +90,10 @@ main <- function() {
     group_by(qname) %>% 
     arrange(qname, desc(accuracy)) %>% 
     filter(accuracy / max(accuracy) >= 0.9)
-  
-  # Export file as a sam file
-  bam_export <- subset(bam_filtered, select=c("qname", "flag", "transcript", "start", "mapq", "cigar", "seq", "qual", "AS"))
-  bam_export <- bam_export %>% 
-    dplyr::mutate(rnext="*", pnext=0, tlen=0, AStext="AS:i:")
-  
-  # Add back in the AS to each alignment
-  bam_export <- transform(bam_export, newcol=paste(AStext, AS, sep=""))
-  
-  col_order <- c("qname", "flag", "transcript", "start", "mapq", "cigar", "rnext", "pnext", "tlen", "seq", "qual", "newcol")
-  bam_export <- bam_export[, col_order]
-  
-  bam_export$seq[bam_export$seq==""]<-"*"
-  bam_export$qual[bam_export$qual==""]<-"*"
-  
-  # Quantify
-  bam_counts <- bam_filtered %>% 
-    group_by(qname) %>% 
-    dplyr::mutate(readcount = 1/n())
-  
-  bam_counts <- bam_counts %>% 
-    group_by(transcript) %>% 
-    tally(readcount)
-  
-  bam_count_export <- merge(txLengths, bam_counts, by.x="tx_name", by.y="transcript", all.x=TRUE)
-  bam_count_export <- subset(bam_count_export, select=c("tx_name", "n"))
-  bam_count_export$n[is.na(bam_count_export$n)] <- 0
-  colnames(bam_count_export) <- c("transcript", "nreads")
-  write.table(bam_count_export, file= paste0(output, "_filtered_quant.txt"), sep="\t", quote=FALSE, col.names = TRUE, row.names = FALSE)
-  
+
+  #issue
   # Export files
   write.table(bam_data, file = paste0(output, "_data.txt"), sep="\t", quote=F, col.names = T, row.names=F) 
-  write.table(bam_export, file = paste0(output, "_pre_filtered.sam"), sep="\t", quote=F, col.names = F, row.names = F)
 
   bam_primary <- subset(bam_data, tp == "P")
   a <- sum(bam_primary$coverage > 0.95)
@@ -128,35 +101,60 @@ main <- function() {
   c <- a/nrow(bam_primary)*100
   d <- median(bam_primary$coverage)
   e <- median(bam_primary$accuracy)*100
-  f <- nrow(bam_data)
-  g <- nrow(subset(bam_data, tp == "P"))
-  h <- nrow(subset(bam_data, tp == "S"))
-  i <- nrow(bam_filtered)
-  j <- nrow(subset(bam_filtered, tp == "P"))
-  k <- nrow(subset(bam_filtered, tp == "S"))
+  f <- length(unique(bam_primary$qname))
+  g <- f/nrow(bam_primary)*100
   
   # Make stats
   metric <- c(
     "Number of reads representing full-length transcripts:",
-    "Out of total primary alignments before filtering:",
+    "Out of total primary alignments:",
     "Percentage of reads representing full-length transcripts:",
     "Median coverage fraction of transcripts:",
     "Median accuracy of primary alignments:",
-    "Alignments before filtering:",
-    "Number of initial alignments that are primary:",
-    "Number of initial alignments that are secondary:",
-    "Alignments left after filtering:",
-    "Number of filtered alignments that are primary:",
-    "Number of filtered alignments that are secondary:")
-  outcome <- c(a,b,c,d,e,f,g,h,i,j,k)
+    "Number of reads that identify unique transcripts:",
+    "Percentage of reads that identify unique transcripts:") 
+  
+  outcome <- c(a,b,c,d,e,f,g)
   stats <- data.frame(metric, outcome)
   
   # Export overall stats file
   write.table(stats, paste0(output, "_stats.txt"), sep="\t", quote=F, row.names=F, col.names=F)
+ 
+  bam_primary <- bam_primary %>% 
+    dplyr::mutate(above=coverage>0.95)
+  
+  # Histogram
+  pdf(paste0(output, "_coverage_fraction.pdf"), width=6, height=6)
+  ggplot(data=bam_primary, aes(x=coverage, fill=above)) +
+    geom_histogram(bins = 180, show.legend = FALSE) +
+    geom_vline(aes(xintercept=0.95), color="black", linetype="dashed", size=0.5) +
+    xlim(0.5,1) +
+    theme_classic(base_size=16) +
+    xlab("Coverage Fraction") +
+    ylab("Count") +
+    scale_fill_manual(values = c("gray", "steelblue3"))
+  dev.off()
+  
+  # 2D Density
+  pdf(paste0(output, "_2d_density.pdf"), width=8, height=5)
+  ggplot() + 
+    stat_density_2d(data=bam_primary, aes(x=txLengths.tx_len, y=coverage, fill = ..level..), geom = "polygon",
+                    position = "identity",
+                    na.rm = TRUE,
+                    show.legend = TRUE,
+                    inherit.aes = TRUE,
+                    bins = 50
+    ) +
+    stat_smooth(data=bam_primary, aes(x=txLengths.tx_len, y=coverage), color="lavender", se=TRUE, size=1, level=0.95) +
+    xlim(0,8000) +
+    ylim(0,1) +
+    xlab("Known Transcript Length") +
+    ylab("Coverage Fraction") +
+    scale_fill_viridis_c() +
+    theme_classic(base_size=16)
+  dev.off() 
   
 }
 
 main()
-
-
 
