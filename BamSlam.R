@@ -91,9 +91,13 @@ main <- function() {
     arrange(qname, desc(accuracy)) %>% 
     filter(accuracy / max(accuracy) >= 0.9)
 
-  #issue
+  unique_reads <-  bam_filtered %>% 
+    group_by(qname) %>% 
+    dplyr::filter(n()==1)
+  
   # Export files
-  write.table(bam_data, file = paste0(output, "_data.txt"), sep="\t", quote=F, col.names = T, row.names=F) 
+  bam_export <- subset(bam_data, select=c("transcript", "qwidth", "start", "end", "width", "qname", "flag", "mapq", "NM", "AS", "tp", "nbrM", "nbrI", "nbrD", "nbrN", "nbrS", "alignedLength", "readLength", "alignedFraction", "accuracy", "txLengths.tx_len", "coverage"))
+  write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
 
   bam_primary <- subset(bam_data, tp == "P")
   a <- sum(bam_primary$coverage > 0.95)
@@ -101,7 +105,7 @@ main <- function() {
   c <- a/nrow(bam_primary)*100
   d <- median(bam_primary$coverage)
   e <- median(bam_primary$accuracy)*100
-  f <- length(unique(bam_primary$qname))
+  f <- nrow(unique_reads)
   g <- f/nrow(bam_primary)*100
   
   # Make stats
@@ -125,7 +129,7 @@ main <- function() {
   
   # Histogram
   pdf(paste0(output, "_coverage_fraction.pdf"), width=6, height=6)
-  ggplot(data=bam_primary, aes(x=coverage, fill=above)) +
+  plot1 <- ggplot(data=bam_primary, aes(x=coverage, fill=above)) +
     geom_histogram(bins = 180, show.legend = FALSE) +
     geom_vline(aes(xintercept=0.95), color="black", linetype="dashed", size=0.5) +
     xlim(0.5,1) +
@@ -133,11 +137,12 @@ main <- function() {
     xlab("Coverage Fraction") +
     ylab("Count") +
     scale_fill_manual(values = c("gray", "steelblue3"))
+  print(plot1)
   dev.off()
   
   # 2D Density
   pdf(paste0(output, "_2d_density.pdf"), width=8, height=5)
-  ggplot() + 
+  plot2 <- ggplot() + 
     stat_density_2d(data=bam_primary, aes(x=txLengths.tx_len, y=coverage, fill = ..level..), geom = "polygon",
                     position = "identity",
                     na.rm = TRUE,
@@ -152,9 +157,11 @@ main <- function() {
     ylab("Coverage Fraction") +
     scale_fill_viridis_c() +
     theme_classic(base_size=16)
+  print(plot2)
   dev.off() 
   
 }
 
 main()
+
 
