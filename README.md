@@ -12,13 +12,15 @@ GenomicFeatures (from Bioconductor)<br>
 dplyr<br>
 ggplot2<br>
 data.table<br>
-tidyr
+tidyr <br>
+MASS <br>
+viridis <br>
 
 ## Usage:
 Rscript BamSlam.R bam_file annotation_file out_prefix
 
 ## Outputs:
-- A summary file of the filtered alignment metrics such as: number and percentage of full-length reads, median coverage fractions etc. <br>
+- A summary file of interesting metrics such as: percentage of full-length reads, median coverage fractions, percentage of reads that uniquely identify a transcript etc. <br>
 - A full-length reads histogram. <br>
 - 2D density plot of known transcript length vs coverage fractions. <br>
 - A CSV file of all input alignments in case further analysis is required. <br>
