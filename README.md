@@ -1,6 +1,5 @@
 # BamSlam
-Filter your ONT BAM and get full-length transcripts.
-This program has been designed for Oxford Nanopore Technologies' direct RNA sequencing data produced after mapping with minimap2 to the reference transcriptome. 
+This script was written for Oxford Nanopore Technologies' direct RNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output important statistics from your alignment data.
 
 ## Inputs:
 You will need to obtain a bam file by aligning your FASTQ/FASTA files to the transcriptome with minimap2 (minimap2 -ax map-ont -N 100). You will also need a GTF annotation file. 
