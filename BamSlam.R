@@ -38,13 +38,38 @@ main <- function() {
       sapply(explodedcigars, function(cg) sum(as.numeric(gsub(paste0(opts, "$"), "", cg)), na.rm = TRUE))
   }
   
+  # Get number of secondary and supplementary alignments
+  tmp <- data.frame(bam %>% setNames(NULL), stringsAsFactors = FALSE) %>%
+    dplyr::rename(nbrJunctions = njunc) %>%
+    dplyr::select(-cigar) 
+  
+  tmp2 <- as.data.frame(table(names(subset(bam, flag %in% c(0, 16)))))
+  if (nrow(tmp2) == 0) tmp2 <- data.frame(Var1 = tmp$qname[1], Freq = 0)
+  tmp <- tmp %>% 
+    dplyr::left_join(tmp2 %>% dplyr::rename(qname = Var1, nbrPrimaryAlignments = Freq))
+  
+  tmp3 <- as.data.frame(table(names(subset(bam, flag %in% c(256, 272)))))
+  if (nrow(tmp3) == 0) tmp3 <- data.frame(Var1 = tmp$qname[1], Freq = 0)
+  tmp <- tmp %>% 
+    dplyr::left_join(tmp3 %>% dplyr::rename(qname = Var1, nbrSecondaryAlignments = Freq))
+  
+  tmp4 <- as.data.frame(table(names(subset(bam, flag %in% c(2048, 2064)))))
+  if (nrow(tmp4) == 0) tmp4 <- data.frame(Var1 = tmp$qname[1], Freq = 0)
+  tmp <- tmp %>% 
+    dplyr::left_join(tmp4 %>% dplyr::rename(qname = Var1, nbrSupplementaryAlignments = Freq))
+  
+  tmp <- tmp %>% dplyr::mutate(nbrSecondaryAlignments = replace(nbrSecondaryAlignments, 
+                                                         is.na(nbrSecondaryAlignments), 0),
+                        nbrSupplementaryAlignments = replace(nbrSupplementaryAlignments, 
+                                                             is.na(nbrSupplementaryAlignments), 0))
+  
   # Add columns of interest
-  bam_data <- data.frame(bam %>% setNames(NULL), stringsAsFactors = FALSE) %>%
+  bam_data <- tmp %>%
     dplyr::mutate(alignedLength = nbrM + nbrI) %>% 
     dplyr::mutate(readLength = nbrS + nbrH + nbrM + nbrI) %>% 
     dplyr::mutate(alignedFraction = alignedLength/readLength) %>% 
     dplyr::mutate(accuracy=(nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD))
-  
+              
   # Make the txdb
   txs <- makeTxDbFromGFF(gtffile, format="gtf")
   txLengths <- transcriptLengths(txs, with.cds_len=TRUE, with.utr5_len=TRUE, with.utr3_len=TRUE)
@@ -96,9 +121,18 @@ main <- function() {
     dplyr::filter(n()==1)
   
   # Export files
-  bam_export <- subset(bam_data, select=c("transcript", "qwidth", "start", "end", "width", "qname", "flag", "mapq", "NM", "AS", "tp", "nbrM", "nbrI", "nbrD", "nbrN", "nbrS", "alignedLength", "readLength", "alignedFraction", "accuracy", "txLengths.tx_len", "coverage"))
+  bam_export <- subset(bam_data, select=c("transcript", "qwidth", "start", "end", "width", "qname", "flag", "mapq", "NM", "AS", "tp", "nbrM", "nbrI", "nbrD", "nbrN", "nbrS", "alignedLength", "readLength", "alignedFraction", "accuracy", "txLengths.tx_len", "coverage", "nbrSecondaryAlignments", "nbrSupplementaryAlignments"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
 
+  bam_sec <- bam_data %>% 
+    dplyr::group_by(qname) %>% 
+    dplyr::arrange(qname, desc(nbrSecondaryAlignments)) %>% 
+    dplyr::slice(n=1)
+  
+  bam_sec$nbrSecondaryAlignments <- as.factor(bam_sec$nbrSecondaryAlignments)
+  
+  unique_reads <-  filter(bam_sec, nbrSecondaryAlignments == 0)
+  
   bam_primary <- subset(bam_data, tp == "P")
   a <- sum(bam_primary$coverage > 0.95)
   b <- nrow(bam_primary)
@@ -115,8 +149,8 @@ main <- function() {
     "Percentage of reads representing full-length transcripts:",
     "Median coverage fraction of transcripts:",
     "Median accuracy of primary alignments:",
-    "Number of reads that identify unique transcripts:",
-    "Percentage of reads that identify unique transcripts:") 
+    "Number of reads with no secondary alignments:",
+    "Percentage of reads with no secondary alignments:") 
   
   outcome <- c(a,b,c,d,e,f,g)
   stats <- data.frame(metric, outcome)
@@ -160,8 +194,20 @@ main <- function() {
   print(plot2)
   dev.off() 
   
+  pdf(paste0(output, "_sec_alns.pdf"), width=8, height=5)
+  plot3 <- ggplot(bam_sec, aes(nbrSecondaryAlignments)) +
+    geom_bar(fill = "steelblue3") +
+    xlab("Number of Secondary Alignments") +
+    ylab("Read Count") +
+    theme_classic(base_size=16)
+  print(plot3)
+  dev.off() 
+  
 }
 
 main()
+
+
+
 
 
