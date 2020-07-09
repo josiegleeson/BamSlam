@@ -63,7 +63,7 @@ main <- function() {
                         nbrSupplementaryAlignments = replace(nbrSupplementaryAlignments, 
                                                              is.na(nbrSupplementaryAlignments), 0))
   
-  # Add columns of interest
+
   bam_data <- tmp %>%
     dplyr::mutate(alignedLength = nbrM + nbrI) %>% 
     dplyr::mutate(readLength = nbrS + nbrH + nbrM + nbrI) %>% 
@@ -129,9 +129,14 @@ main <- function() {
     dplyr::arrange(qname, desc(nbrSecondaryAlignments)) %>% 
     dplyr::slice(n=1)
   
-  bam_sec$nbrSecondaryAlignments <- as.factor(bam_sec$nbrSecondaryAlignments)
-  
   unique_reads <-  filter(bam_sec, nbrSecondaryAlignments == 0)
+  
+  bam_sec <- bam_sec %>% 
+    group_by(nbrSecondaryAlignments) %>% 
+    summarise(total = n()) %>%
+    mutate(prop = total / sum(total))
+  
+  bam_sec$nbrSecondaryAlignments <- as.factor(bam_sec$nbrSecondaryAlignments)
   
   bam_primary <- subset(bam_data, tp == "P")
   a <- sum(bam_primary$coverage > 0.95)
@@ -195,10 +200,11 @@ main <- function() {
   dev.off() 
   
   pdf(paste0(output, "_sec_alns.pdf"), width=8, height=5)
-  plot3 <- ggplot(bam_sec, aes(nbrSecondaryAlignments)) +
-    geom_bar(fill = "steelblue3") +
+  plot3 <- ggplot(bam_sec) +
+    geom_bar(stat='identity', aes(x=nbrSecondaryAlignments, y=prop), fill = "steelblue3") +
     xlab("Number of Secondary Alignments") +
-    ylab("Read Count") +
+    ylab("Proportion of Reads") +
+    ylim(0,1) +
     theme_classic(base_size=16)
   print(plot3)
   dev.off() 
@@ -206,7 +212,6 @@ main <- function() {
 }
 
 main()
-
 
 
 
