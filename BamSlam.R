@@ -5,7 +5,7 @@
 # GenomicAlignments/Features package is from bioconductor, need to install bioconductor then run:
 # BiocManager::install("GenomicFeatures")
 
-# Lines 28-66 are from parts of: https://github.com/csoneson/NativeRNAseqComplexTranscriptome 
+# Lines 28-66 are from parts of: https://github.com/csoneson/NativeRNAseqComplexTranscriptome (Copyright (c) 2019 Charlotte Soneson)
 
 main <- function() {
   
