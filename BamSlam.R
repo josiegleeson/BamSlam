@@ -95,7 +95,10 @@ main <- function() {
   
   bam_data <- bam_data %>% 
     dplyr::mutate(coverage=width/txLengths.tx_len)
-    tidyr::drop_na(coverage)
+
+  bam_data$coverage <- as.numeric(bam_data$coverage)
+  bam_data <- bam_data %>% 
+    tidyr::drop_na(coverage)           
   
   # Filter 
   bam_data <- bam_data %>% 
