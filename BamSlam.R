@@ -29,6 +29,8 @@ main <- function() {
                          param = ScanBamParam(tag = c("NM", "AS", "tp"),
                                               what = c("qname","flag", "rname", 
                                                        "pos", "mapq", "seq", "qual")))
+  message("Imported bam file")
+  
   # Expand cigar strings
   ops <- GenomicAlignments::CIGAR_OPS
   wdths <- GenomicAlignments::explodeCigarOpLengths(cigar(bam), ops = ops)
@@ -64,7 +66,7 @@ main <- function() {
                                                          is.na(nbrSecondaryAlignments), 0),
                         nbrSupplementaryAlignments = replace(nbrSupplementaryAlignments, 
                                                              is.na(nbrSupplementaryAlignments), 0))
-  
+  message("Created CIGAR string columns")
 
   bam_data <- tmp %>%
     dplyr::mutate(alignedLength = nbrM + nbrI) %>% 
@@ -90,6 +92,8 @@ main <- function() {
     bam_data$seqnames <- NULL
   }
   
+  message("Imported GTF")           
+             
   # Merge known tx length
   bam_data <- merge(bam_data, lengths, by.x="transcript", by.y="txLengths.tx_name", all.x=TRUE)
   
@@ -126,10 +130,12 @@ main <- function() {
     group_by(qname) %>% 
     dplyr::filter(n()==1)
   
+  message("Calculated transcript coverages")            
+             
   # Export files
   bam_export <- subset(bam_data, select=c("transcript", "qwidth", "start", "end", "width", "qname", "flag", "mapq", "NM", "AS", "tp", "nbrM", "nbrI", "nbrD", "nbrN", "nbrS", "alignedLength", "readLength", "alignedFraction", "accuracy", "txLengths.tx_len", "coverage", "nbrSecondaryAlignments", "nbrSupplementaryAlignments"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
-
+  message("Exported data as csv")
   bam_sec <- bam_data %>% 
     dplyr::group_by(qname) %>% 
     dplyr::arrange(qname, desc(nbrSecondaryAlignments)) %>% 
@@ -168,10 +174,10 @@ main <- function() {
   
   # Export overall stats file
   write.table(stats, paste0(output, "_stats.txt"), sep="\t", quote=F, row.names=F, col.names=F)
- 
+  message("Exported stats file")
   bam_primary <- bam_primary %>% 
     dplyr::mutate(above=coverage>0.95)
-  
+  message("Creating plots")
   # Histogram
   pdf(paste0(output, "_coverage_fraction.pdf"), width=6, height=6)
   plot1 <- ggplot(data=bam_primary, aes(x=coverage, fill=above)) +
@@ -214,7 +220,7 @@ main <- function() {
     theme_classic(base_size=16)
   print(plot3)
   dev.off() 
-  
+  message("Complete")
 }
 
 main()
