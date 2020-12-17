@@ -150,7 +150,8 @@ main <- function() {
   
   bam_sec$nbrSecondaryAlignments <- as.factor(bam_sec$nbrSecondaryAlignments)
   
-  bam_primary <- subset(bam_data, tp == "P")
+  bam_primary <- subset(bam_data, flag == 0)
+             
   a <- sum(bam_primary$coverage > 0.95)
   b <- nrow(bam_primary)
   c <- a/nrow(bam_primary)*100
