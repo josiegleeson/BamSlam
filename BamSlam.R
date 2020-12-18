@@ -1,4 +1,3 @@
-
 # Replace sample1 with your file name or sample name
 # Usage: Rscript BamSlam.R yourfile.bam gencode.gtf ouputprefix
 
@@ -6,6 +5,7 @@
 # BiocManager::install("GenomicFeatures")
 
 # Lines 28-66 are from parts of: https://github.com/csoneson/NativeRNAseqComplexTranscriptome (Copyright (c) 2019 Charlotte Soneson)
+
 
 main <- function() {
   
@@ -63,17 +63,17 @@ main <- function() {
     dplyr::left_join(tmp4 %>% dplyr::rename(qname = Var1, nbrSupplementaryAlignments = Freq))
   
   tmp <- tmp %>% dplyr::mutate(nbrSecondaryAlignments = replace(nbrSecondaryAlignments, 
-                                                         is.na(nbrSecondaryAlignments), 0),
-                        nbrSupplementaryAlignments = replace(nbrSupplementaryAlignments, 
-                                                             is.na(nbrSupplementaryAlignments), 0))
+                                                                is.na(nbrSecondaryAlignments), 0),
+                               nbrSupplementaryAlignments = replace(nbrSupplementaryAlignments, 
+                                                                    is.na(nbrSupplementaryAlignments), 0))
   message("Created CIGAR string columns")
-
+  
   bam_data <- tmp %>%
     dplyr::mutate(alignedLength = nbrM + nbrI) %>% 
     dplyr::mutate(readLength = nbrS + nbrH + nbrM + nbrI) %>% 
     dplyr::mutate(alignedFraction = alignedLength/readLength) %>% 
     dplyr::mutate(accuracy=(nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD))
-              
+  
   # Make the txdb
   txs <- makeTxDbFromGFF(gtffile, format="gtf")
   txLengths <- transcriptLengths(txs, with.cds_len=TRUE, with.utr5_len=TRUE, with.utr3_len=TRUE)
@@ -93,13 +93,13 @@ main <- function() {
   }
   
   message("Imported GTF")           
-             
+  
   # Merge known tx length
   bam_data <- merge(bam_data, lengths, by.x="transcript", by.y="txLengths.tx_name", all.x=TRUE)
   
   bam_data <- bam_data %>% 
     dplyr::mutate(coverage=width/txLengths.tx_len)
-
+  
   bam_data$coverage <- as.numeric(bam_data$coverage)
   bam_data <- bam_data %>% 
     tidyr::drop_na(coverage)           
@@ -109,7 +109,7 @@ main <- function() {
     dplyr::filter(strand == "+")
   
   #bam_filtered <- bam_data %>% 
-    #dplyr::filter(end > (txLengths.tx_len - 100))
+  #dplyr::filter(end > (txLengths.tx_len - 100))
   
   bam_filtered <- bam_data %>% 
     group_by(qname) %>% 
@@ -125,13 +125,13 @@ main <- function() {
     group_by(qname) %>% 
     arrange(qname, desc(accuracy)) %>% 
     filter(accuracy / max(accuracy) >= 0.9)
-
+  
   unique_reads <-  bam_filtered %>% 
     group_by(qname) %>% 
     dplyr::filter(n()==1)
   
   message("Calculated transcript coverages")            
-             
+  
   # Export files
   bam_export <- subset(bam_data, select=c("transcript", "qwidth", "start", "end", "width", "qname", "flag", "mapq", "NM", "AS", "tp", "nbrM", "nbrI", "nbrD", "nbrN", "nbrS", "alignedLength", "readLength", "alignedFraction", "accuracy", "txLengths.tx_len", "coverage", "nbrSecondaryAlignments", "nbrSupplementaryAlignments"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
@@ -151,7 +151,13 @@ main <- function() {
   bam_sec$nbrSecondaryAlignments <- as.factor(bam_sec$nbrSecondaryAlignments)
   
   bam_primary <- subset(bam_data, flag == 0)
-             
+  
+  bam_per_unique_transcript <- bam_primary %>% 
+    dplyr::group_by(transcript) %>% 
+    summarise(coverage = median(coverage, na.rm = TRUE))
+  
+  write.csv(bam_per_unique_transcript, file = paste0(output, "_transcript_level_data.csv"), sep=",", quote=F, col.names = T, row.names=F)  
+  
   a <- sum(bam_primary$coverage > 0.95)
   b <- nrow(bam_primary)
   c <- a/nrow(bam_primary)*100
@@ -159,6 +165,8 @@ main <- function() {
   e <- median(bam_primary$accuracy)*100
   f <- nrow(unique_reads)
   g <- f/nrow(bam_primary)*100
+  h <- nrow(bam_per_unique_transcript)
+  i <- median(bam_per_unique_transcript$coverage)
   
   # Make stats
   metric <- c(
@@ -168,9 +176,11 @@ main <- function() {
     "Median coverage fraction of transcripts:",
     "Median accuracy of primary alignments:",
     "Number of reads with no secondary alignments:",
-    "Percentage of reads with no secondary alignments:") 
+    "Percentage of reads with no secondary alignments:",
+    "Number of unique transcripts identified:",
+    "Median coverage per transcript:") 
   
-  outcome <- c(a,b,c,d,e,f,g)
+  outcome <- c(a,b,c,d,e,f,g,h,i)
   stats <- data.frame(metric, outcome)
   
   # Export overall stats file
@@ -225,7 +235,3 @@ main <- function() {
 }
 
 main()
-
-
-
-
