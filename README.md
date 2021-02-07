@@ -25,3 +25,4 @@ Rscript BamSlam.R bam_file annotation_file out_prefix
 - 2D density plot of known transcript length vs coverage fractions. <br>
 - A plot showing the number of reads with each number of secondary alignments. <br>
 - A CSV file of all input alignments in case further analysis is required. <br>
+- A CSV file summarised to median coverage of unique transcripts identified. <br>
