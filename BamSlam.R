@@ -244,6 +244,7 @@ main <- function() {
   plot4 <- ggplot(data=length_per_unique_transcript, aes(x=txLengths.tx_len)) +
     geom_histogram(bins = 180, show.legend = FALSE, fill="steelblue3") +
     theme_classic(base_size=16) +
+    xlim(0,20000) +
     xlab("Known Transcript Length") +
     ylab("Count")
   print(plot4)
