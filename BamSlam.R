@@ -6,7 +6,6 @@
 
 # Lines 28-66 are from parts of: https://github.com/csoneson/NativeRNAseqComplexTranscriptome (Copyright (c) 2019 Charlotte Soneson)
 
-
 main <- function() {
   
   args <- commandArgs(trailingOnly = TRUE)
@@ -105,6 +104,7 @@ main <- function() {
     tidyr::drop_na(coverage)           
   
   # Filter 
+  # If your data is from cDNA you should comment out the filtering step for + strand only
   bam_data <- bam_data %>% 
     dplyr::filter(strand == "+")
   
@@ -150,11 +150,15 @@ main <- function() {
   
   bam_sec$nbrSecondaryAlignments <- as.factor(bam_sec$nbrSecondaryAlignments)
   
-  bam_primary <- subset(bam_data, flag == 0)
+  bam_primary <- subset(bam_data, flag == 0 | flag == 16)
   
   bam_per_unique_transcript <- bam_primary %>% 
     dplyr::group_by(transcript) %>% 
     summarise(coverage = median(coverage, na.rm = TRUE))
+  
+  length_per_unique_transcript <- bam_primary %>% 
+    dplyr::group_by(transcript) %>% 
+    summarise(txLengths.tx_len)
   
   write.csv(bam_per_unique_transcript, file = paste0(output, "_transcript_level_data.csv"), sep=",", quote=F, col.names = T, row.names=F)  
   
@@ -167,6 +171,7 @@ main <- function() {
   g <- f/nrow(bam_primary)*100
   h <- nrow(bam_per_unique_transcript)
   i <- median(bam_per_unique_transcript$coverage)
+  j <- median(length_per_unique_transcript$txLengths.tx_len)
   
   # Make stats
   metric <- c(
@@ -178,9 +183,10 @@ main <- function() {
     "Number of reads with no secondary alignments:",
     "Percentage of reads with no secondary alignments:",
     "Number of unique transcripts identified:",
-    "Median coverage per transcript:") 
+    "Median coverage fraction of all unique transcripts:",
+    "Median length of all unique transcripts identified:") 
   
-  outcome <- c(a,b,c,d,e,f,g,h,i)
+  outcome <- c(a,b,c,d,e,f,g,h,i,j)
   stats <- data.frame(metric, outcome)
   
   # Export overall stats file
@@ -189,6 +195,7 @@ main <- function() {
   bam_primary <- bam_primary %>% 
     dplyr::mutate(above=coverage>0.95)
   message("Creating plots")
+  
   # Histogram
   pdf(paste0(output, "_coverage_fraction.pdf"), width=6, height=6)
   plot1 <- ggplot(data=bam_primary, aes(x=coverage, fill=above)) +
@@ -231,6 +238,17 @@ main <- function() {
     theme_classic(base_size=16)
   print(plot3)
   dev.off() 
+  
+  # Histogram unqiue transcript lengths
+  pdf(paste0(output, "_transcript_length_distribution.pdf"), width=6, height=6)
+  plot4 <- ggplot(data=length_per_unique_transcript, aes(x=txLengths.tx_len)) +
+    geom_histogram(bins = 180, show.legend = FALSE, fill="steelblue3") +
+    theme_classic(base_size=16) +
+    xlab("Known Transcript Length") +
+    ylab("Count")
+  print(plot4)
+  dev.off()
+  
   message("Complete")
 }
 
