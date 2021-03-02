@@ -108,27 +108,11 @@ main <- function() {
   bam_data <- bam_data %>% 
     dplyr::filter(strand == "+")
   
+  # The following two lines are now implemented in NanoCount, 
+  # these remove alignments that have mapped the 3' end of the read more than 100 bases away from the known 3' end. 
+  # Because direct RNA sequencing always begins at 3' ends, these should be mapped very close to known 3' ends not in the middle of transcripts. 
   #bam_filtered <- bam_data %>% 
   #dplyr::filter(end > (txLengths.tx_len - 100))
-  
-  bam_filtered <- bam_data %>% 
-    group_by(qname) %>% 
-    arrange(qname, desc(AS)) %>% 
-    filter(AS / max(AS) >= 0.9)
-  
-  bam_filtered <- bam_filtered %>% 
-    group_by(qname) %>% 
-    arrange(qname, desc(alignedFraction)) %>% 
-    filter(alignedFraction / max(alignedFraction) >= 0.9)
-  
-  bam_filtered <- bam_filtered %>% 
-    group_by(qname) %>% 
-    arrange(qname, desc(accuracy)) %>% 
-    filter(accuracy / max(accuracy) >= 0.9)
-  
-  unique_reads <-  bam_filtered %>% 
-    group_by(qname) %>% 
-    dplyr::filter(n()==1)
   
   message("Calculated transcript coverages")            
   
@@ -136,11 +120,13 @@ main <- function() {
   bam_export <- subset(bam_data, select=c("transcript", "qwidth", "start", "end", "width", "qname", "flag", "mapq", "NM", "AS", "tp", "nbrM", "nbrI", "nbrD", "nbrN", "nbrS", "alignedLength", "readLength", "alignedFraction", "accuracy", "txLengths.tx_len", "coverage", "nbrSecondaryAlignments", "nbrSupplementaryAlignments"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
   message("Exported data as csv")
+  
   bam_sec <- bam_data %>% 
     dplyr::group_by(qname) %>% 
     dplyr::arrange(qname, desc(nbrSecondaryAlignments)) %>% 
     dplyr::slice(n=1)
   
+  # Reads with no secondary alignments are defined as unique           
   unique_reads <-  filter(bam_sec, nbrSecondaryAlignments == 0)
   
   bam_sec <- bam_sec %>% 
