@@ -27,7 +27,7 @@ main <- function() {
   bam <- readGAlignments(bamfile, use.names = TRUE,
                          param = ScanBamParam(tag = c("NM", "AS", "tp"),
                                               what = c("qname","flag", "rname", 
-                                                       "pos", "mapq", "seq", "qual")))
+                                                       "pos", "mapq")))
   message("Imported bam file")
   
   # Expand cigar strings
