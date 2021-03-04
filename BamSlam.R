@@ -1,16 +1,14 @@
-# Replace sample1 with your file name or sample name
-# Usage: Rscript BamSlam.R yourfile.bam gencode.gtf ouputprefix
+
+# Usage: Rscript BamSlam.R rna/cdna file.bam outputprefix
 
 # GenomicAlignments/Features package is from bioconductor, need to install bioconductor then run:
 # BiocManager::install("GenomicFeatures")
 
-# Lines 28-66 are from parts of: https://github.com/csoneson/NativeRNAseqComplexTranscriptome (Copyright (c) 2019 Charlotte Soneson)
-
 main <- function() {
   
   args <- commandArgs(trailingOnly = TRUE)
-  bamfile <- args[1]
-  gtffile <- args[2]
+  type <- args[1]
+  bamfile <- args[2]
   output <- args[3]
   suppressPackageStartupMessages({
     library(GenomicAlignments)
@@ -21,130 +19,92 @@ main <- function() {
     library(tidyr)
     library(MASS)
     library(viridis)
+    library(zoo)
   })
-  
+    
   # Import bam
   bam <- readGAlignments(bamfile, use.names = TRUE,
                          param = ScanBamParam(tag = c("NM", "AS", "tp"),
-                                              what = c("qname","flag", "rname", 
-                                                       "pos", "mapq")))
+                                              what = c("qname","flag","mapq")))
   message("Imported bam file")
   
-  # Expand cigar strings
-  ops <- GenomicAlignments::CIGAR_OPS
-  wdths <- GenomicAlignments::explodeCigarOpLengths(cigar(bam), ops = ops)
-  keep.ops <- GenomicAlignments::explodeCigarOps(cigar(bam), ops = ops)
-  explodedcigars <- IRanges::CharacterList(relist(paste0(unlist(wdths), 
-                                                         unlist(keep.ops)), wdths))
-  for (opts in setdiff(GenomicAlignments::CIGAR_OPS, "=")) {
-    mcols(bam)[[paste0("nbr", opts)]] <- 
-      sapply(explodedcigars, function(cg) sum(as.numeric(gsub(paste0(opts, "$"), "", cg)), na.rm = TRUE))
+  # Expand CIGAR strings
+  cigaropts = cigarOpTable(bam@cigar)
+  
+  for (col in colnames(cigaropts)) {
+    mcols(bam)[[paste0("nbr", col)]] = cigaropts[, col]
   }
   
-  # Get number of secondary and supplementary alignments
-  tmp <- data.frame(bam %>% setNames(NULL), stringsAsFactors = FALSE) %>%
-    dplyr::rename(nbrJunctions = njunc) %>%
-    dplyr::select(-cigar) 
+  message("Expanded CIGAR strings")
   
-  tmp2 <- as.data.frame(table(names(subset(bam, flag %in% c(0, 16)))))
-  if (nrow(tmp2) == 0) tmp2 <- data.frame(Var1 = tmp$qname[1], Freq = 0)
-  tmp <- tmp %>% 
-    dplyr::left_join(tmp2 %>% dplyr::rename(qname = Var1, nbrPrimaryAlignments = Freq))
+  bam_1 <- as.data.frame(bam %>% setNames(NULL), stringsAsFactors = FALSE) %>%
+    dplyr::select(-cigar) %>% 
+    dplyr::select(-njunc)
   
-  tmp3 <- as.data.frame(table(names(subset(bam, flag %in% c(256, 272)))))
-  if (nrow(tmp3) == 0) tmp3 <- data.frame(Var1 = tmp$qname[1], Freq = 0)
-  tmp <- tmp %>% 
-    dplyr::left_join(tmp3 %>% dplyr::rename(qname = Var1, nbrSecondaryAlignments = Freq))
+  if (type == "cdna") {
+    message("Type is cdna")
+    bam_data <- subset(bam_1, flag == 0 | flag == 16 | flag == 256 | flag == 272)
+  } else if (type == "rna") {
+    message("Type is rna")
+    bam_data <- subset(bam_1, flag == 0 | flag == 256)
+  } else {
+    print("Sequencing type missing or invalied. Please enter either: cdna rna")
+  }
   
-  tmp4 <- as.data.frame(table(names(subset(bam, flag %in% c(2048, 2064)))))
-  if (nrow(tmp4) == 0) tmp4 <- data.frame(Var1 = tmp$qname[1], Freq = 0)
-  tmp <- tmp %>% 
-    dplyr::left_join(tmp4 %>% dplyr::rename(qname = Var1, nbrSupplementaryAlignments = Freq))
-  
-  tmp <- tmp %>% dplyr::mutate(nbrSecondaryAlignments = replace(nbrSecondaryAlignments, 
-                                                                is.na(nbrSecondaryAlignments), 0),
-                               nbrSupplementaryAlignments = replace(nbrSupplementaryAlignments, 
-                                                                    is.na(nbrSupplementaryAlignments), 0))
-  message("Created CIGAR string columns")
-  
-  bam_data <- tmp %>%
+  bam_data <- bam_data %>% 
     dplyr::mutate(alignedLength = nbrM + nbrI) %>% 
     dplyr::mutate(readLength = nbrS + nbrH + nbrM + nbrI) %>% 
     dplyr::mutate(alignedFraction = alignedLength/readLength) %>% 
     dplyr::mutate(accuracy=(nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD))
   
-  # Make the txdb
-  txs <- makeTxDbFromGFF(gtffile, format="gtf")
-  txLengths <- transcriptLengths(txs, with.cds_len=TRUE, with.utr5_len=TRUE, with.utr3_len=TRUE)
-  lengths <- data.frame(txLengths$tx_name, txLengths$tx_len)
-  bam_data$seqnames <- as.character(bam_data$seqnames)
-  
-  # Make it work with alignments to gencode fasta
-  if((grepl("\\|", bam_data$seqnames)) == TRUE) {
-    bam_data <- data.frame(bam_data, do.call(rbind, strsplit(bam_data$seqnames, "\\|"))[,1])
-    bam_data$do.call.rbind..strsplit.bam_data.seqnames............1. <- as.character(bam_data$do.call.rbind..strsplit.bam_data.seqnames............1.)
-    bam_data$transcript <- bam_data$do.call.rbind..strsplit.bam_data.seqnames............1.
-    bam_data$seqnames <- NULL
-    bam_data$do.call.rbind..strsplit.bam_data.seqnames............1. <- NULL
-  } else {
-    bam_data$transcript <- bam_data$seqnames
-    bam_data$seqnames <- NULL
-  }
-  
-  message("Imported GTF")           
-  
-  # Merge known tx length
-  bam_data <- merge(bam_data, lengths, by.x="transcript", by.y="txLengths.tx_name", all.x=TRUE)
+  lengths <- as.data.frame(bam@seqinfo) %>% 
+    dplyr::select(-isCircular) %>% 
+    dplyr::select(-genome) %>% 
+    tibble::rownames_to_column("reference")
+ 
+  # Merge known lengths and calculate transcript coverage
+  bam_data <- merge(bam_data, lengths, by.x="seqnames", by.y="reference", all.x=TRUE)
   
   bam_data <- bam_data %>% 
-    dplyr::mutate(coverage=width/txLengths.tx_len)
+    dplyr::mutate(coverage=width/seqlengths)
   
   bam_data$coverage <- as.numeric(bam_data$coverage)
+  
   bam_data <- bam_data %>% 
-    tidyr::drop_na(coverage)           
+    tidyr::drop_na(coverage)      
   
-  # Filter 
-  # If your data is from cDNA you should comment out the filtering step for + strand only
-  bam_data <- bam_data %>% 
-    dplyr::filter(strand == "+")
+  message("Calculated transcript coverages") 
+
+  alignments <- bam_data %>% 
+    group_by(qname) %>% 
+    summarise(nbrSecondary = n()-1) %>% 
+    rename(read = qname)
   
-  # The following two lines are now implemented in NanoCount, 
-  # these remove alignments that have mapped the 3' end of the read more than 100 bases away from the known 3' end. 
-  # Because direct RNA sequencing always begins at 3' ends, these should be mapped very close to known 3' ends not in the middle of transcripts. 
-  #bam_filtered <- bam_data %>% 
-  #dplyr::filter(end > (txLengths.tx_len - 100))
+  bam_data <- merge(bam_data, alignments, by.x="qname", by.y="read", all.x=TRUE)
   
-  message("Calculated transcript coverages")            
+  alignments <- alignments %>% 
+    group_by(nbrSecondary) %>% 
+    summarise(total = n()) %>%
+    mutate(prop = total / sum(total))
+    
+  bam_data$nbrSecondary <- as.factor(bam_data$nbrSecondary)
+  alignments$nbrSecondary <- as.factor(alignments$nbrSecondary)
   
   # Export files
-  bam_export <- subset(bam_data, select=c("transcript", "qwidth", "start", "end", "width", "qname", "flag", "mapq", "NM", "AS", "tp", "nbrM", "nbrI", "nbrD", "nbrN", "nbrS", "alignedLength", "readLength", "alignedFraction", "accuracy", "txLengths.tx_len", "coverage", "nbrSecondaryAlignments", "nbrSupplementaryAlignments"))
+  bam_export <- subset(bam_data, select=c("qname", "seqnames", "flag", "mapq", "AS", "alignedLength", "readLength", "alignedFraction", "accuracy", "seqlengths", "coverage", "nbrSecondary"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
   message("Exported data as csv")
   
-  bam_sec <- bam_data %>% 
-    dplyr::group_by(qname) %>% 
-    dplyr::arrange(qname, desc(nbrSecondaryAlignments)) %>% 
-    dplyr::slice(n=1)
-  
-  # Reads with no secondary alignments are defined as unique           
-  unique_reads <-  filter(bam_sec, nbrSecondaryAlignments == 0)
-  
-  bam_sec <- bam_sec %>% 
-    group_by(nbrSecondaryAlignments) %>% 
-    summarise(total = n()) %>%
-    mutate(prop = total / sum(total))
-  
-  bam_sec$nbrSecondaryAlignments <- as.factor(bam_sec$nbrSecondaryAlignments)
-  
-  bam_primary <- subset(bam_data, flag == 0 | flag == 16)
-  
+  bam_primary <- bam_data %>% 
+    subset(flag == 0 | flag == 16)
+    
   bam_per_unique_transcript <- bam_primary %>% 
-    dplyr::group_by(transcript) %>% 
+    dplyr::group_by(seqnames) %>% 
     summarise(coverage = median(coverage, na.rm = TRUE))
   
   length_per_unique_transcript <- bam_primary %>% 
-    dplyr::group_by(transcript) %>% 
-    summarise(txLengths.tx_len)
+    dplyr::group_by(seqnames) %>% 
+    summarise(seqlengths)
   
   write.csv(bam_per_unique_transcript, file = paste0(output, "_transcript_level_data.csv"), sep=",", quote=F, col.names = T, row.names=F)  
   
@@ -153,18 +113,18 @@ main <- function() {
   c <- a/nrow(bam_primary)*100
   d <- median(bam_primary$coverage)
   e <- median(bam_primary$accuracy)*100
-  f <- nrow(unique_reads)
+  f <- sum(bam_data$nbrSecondary == 0)
   g <- f/nrow(bam_primary)*100
   h <- nrow(bam_per_unique_transcript)
   i <- median(bam_per_unique_transcript$coverage)
-  j <- median(length_per_unique_transcript$txLengths.tx_len)
+  j <- median(length_per_unique_transcript$seqlengths)
   
   # Make stats
   metric <- c(
     "Number of reads representing full-length transcripts:",
-    "Out of total primary alignments:",
+    "Total primary alignments:",
     "Percentage of reads representing full-length transcripts:",
-    "Median coverage fraction of transcripts:",
+    "Median coverage fraction of transcripts (primary alignments):",
     "Median accuracy of primary alignments:",
     "Number of reads with no secondary alignments:",
     "Percentage of reads with no secondary alignments:",
@@ -177,12 +137,14 @@ main <- function() {
   
   # Export overall stats file
   write.table(stats, paste0(output, "_stats.txt"), sep="\t", quote=F, row.names=F, col.names=F)
-  message("Exported stats file")
+  message("Exported data")
+  
   bam_primary <- bam_primary %>% 
     dplyr::mutate(above=coverage>0.95)
+  
   message("Creating plots")
   
-  # Histogram
+  # Histogram of coverage
   pdf(paste0(output, "_coverage_fraction.pdf"), width=6, height=6)
   plot1 <- ggplot(data=bam_primary, aes(x=coverage, fill=above)) +
     geom_histogram(bins = 180, show.legend = FALSE) +
@@ -195,48 +157,53 @@ main <- function() {
   print(plot1)
   dev.off()
   
-  # 2D Density
-  pdf(paste0(output, "_2d_density.pdf"), width=8, height=5)
-  plot2 <- ggplot() + 
-    stat_density_2d(data=bam_primary, aes(x=txLengths.tx_len, y=coverage, fill = ..level..), geom = "polygon",
-                    position = "identity",
-                    na.rm = TRUE,
-                    show.legend = TRUE,
-                    inherit.aes = TRUE,
-                    bins = 50
-    ) +
-    stat_smooth(data=bam_primary, aes(x=txLengths.tx_len, y=coverage), color="lavender", se=TRUE, size=1, level=0.95) +
-    xlim(0,8000) +
+  # Rolling average trend line for histogram
+  bam_primary <- bam_primary %>% 
+    arrange(seqlengths) %>% 
+    mutate(rolling = rollmean(coverage, 50000, na.pad=TRUE))
+  
+  # Histogram of coverage vs length
+  pdf(paste0(output, "_density_histogram.pdf"), width=8, height=5)
+  plot2 <- ggplot() +
+    geom_hex(data=bam_primary, aes(x=seqlengths, y=coverage, fill = stat(log(count))), bins=100) +
+    geom_line(data=bam_primary, aes(x=seqlengths, y=rolling), color="lavender", size=0.2) +
+    #stat_smooth(data=bam_primary, aes(x=seqlengths, y=coverage), color="darksalmon", se=TRUE, size=0.5, level=0.95) +
+    xlim(0,15000) +
     ylim(0,1) +
     xlab("Known Transcript Length") +
     ylab("Coverage Fraction") +
-    scale_fill_viridis_c() +
+    scale_fill_viridis_c() + 
     theme_classic(base_size=16)
   print(plot2)
-  dev.off() 
+  dev.off()
   
+  # Secondary alignments bar chart
   pdf(paste0(output, "_sec_alns.pdf"), width=8, height=5)
-  plot3 <- ggplot(bam_sec) +
-    geom_bar(stat='identity', aes(x=nbrSecondaryAlignments, y=prop), fill = "steelblue3") +
+  plot3 <- ggplot(alignments) +
+    geom_bar(stat='identity', aes(x=nbrSecondary, y=prop), fill = "steelblue3") +
     xlab("Number of Secondary Alignments") +
     ylab("Proportion of Reads") +
     ylim(0,1) +
-    theme_classic(base_size=16)
+    scale_x_discrete(breaks = alignments$nbrSecondary, labels = alignments$nbrSecondary) +
+    theme_classic(base_size=16) 
   print(plot3)
   dev.off() 
   
   # Histogram unqiue transcript lengths
   pdf(paste0(output, "_transcript_length_distribution.pdf"), width=6, height=6)
-  plot4 <- ggplot(data=length_per_unique_transcript, aes(x=txLengths.tx_len)) +
+  plot4 <- ggplot(data=length_per_unique_transcript, aes(x=seqlengths)) +
     geom_histogram(bins = 180, show.legend = FALSE, fill="steelblue3") +
     theme_classic(base_size=16) +
-    xlim(0,20000) +
+    xlim(0,10000) +
     xlab("Known Transcript Length") +
     ylab("Count")
   print(plot4)
   dev.off()
   
   message("Complete")
+  
 }
 
+suppressWarnings(
 main()
+)
