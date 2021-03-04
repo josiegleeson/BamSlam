@@ -153,16 +153,16 @@ main <- function() {
   dev.off()
   
   # Rolling average trend line for histogram
-  bam_primary <- bam_primary %>% 
-    arrange(seqlengths) %>% 
-    mutate(rolling = rollmean(coverage, 50000, na.pad=TRUE))
+ # bam_primary <- bam_primary %>% 
+   # arrange(seqlengths) %>% 
+   # mutate(rolling = rollmean(coverage, 50000, na.pad=TRUE))
   
   # Histogram of coverage vs length
   pdf(paste0(output, "_density.pdf"), width=8, height=5)
   plot2 <- ggplot() +
     geom_hex(data=bam_primary, aes(x=seqlengths, y=coverage, fill = stat(log(count))), bins=100) +
-    geom_line(data=bam_primary, aes(x=seqlengths, y=rolling), color="lavender", size=0.2) +
-    #stat_smooth(data=bam_primary, aes(x=seqlengths, y=coverage), color="darksalmon", se=TRUE, size=0.5, level=0.95) +
+    #geom_line(data=bam_primary, aes(x=seqlengths, y=rolling), color="lavender", size=0.2) +
+    stat_smooth(data=bam_primary, aes(x=seqlengths, y=coverage), color="lavender", se=TRUE, size=0.5, level=0.95) +
     xlim(0,15000) +
     ylim(0,1) +
     xlab("Known Transcript Length") +
