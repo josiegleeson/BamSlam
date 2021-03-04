@@ -100,7 +100,7 @@ main <- function() {
   
   length_per_unique_transcript <- bam_primary %>% 
     dplyr::group_by(seqnames) %>% 
-    summarise(seqlengths)
+    summarise(seqlengths = max(seqlengths))
   
   write.csv(bam_per_unique_transcript, file = paste0(output, "_transcript_level_data.csv"), sep=",", quote=F, col.names = T, row.names=F)  
   
