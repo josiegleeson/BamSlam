@@ -10,6 +10,7 @@ GenomicAlignments (from Bioconductor)<br>
 dplyr<br>
 tidyr<br>
 tibble<br>
+data.table<br>
 ggplot2<br>
 viridis <br>
 zoo <br>
