@@ -2,7 +2,7 @@
 This script was written for Oxford Nanopore Technologies' direct RNA/cDNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output a statistics file and plots from your alignment data. This script was used in: https://www.biorxiv.org/content/10.1101/2020.08.02.232785v1
 
 ## Inputs:
-To obtain a BAM file align your FASTQ/FASTA files to the transcriptome with minimap2 (minimap2 -ax map-ont --sam-hit-only). If minimap2 is not run with --sam-hit-only you should remove unmapped reads prior to running BamSlam to slowing it down.
+To obtain a BAM file align your FASTQ/FASTA files to the transcriptome with minimap2 (minimap2 -ax map-ont --sam-hit-only). If minimap2 is not run with --sam-hit-only you should remove unmapped reads prior to running BamSlam to avoid slowing it down.
 
 ## Prerequisites:
 <b>R packages:</b><br>
