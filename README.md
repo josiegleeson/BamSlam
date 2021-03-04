@@ -8,6 +8,8 @@ To obtain a BAM file align your FASTQ/FASTA files to the transcriptome with mini
 <b>R packages:</b><br>
 GenomicAlignments (from Bioconductor)<br>
 dplyr<br>
+tidyr<br>
+tibble<br>
 ggplot2<br>
 viridis <br>
 zoo <br>
