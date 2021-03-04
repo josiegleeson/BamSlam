@@ -1,5 +1,5 @@
-
-# Usage: Rscript BamSlam.R rna/cdna file.bam outputprefix
+# Replace sample1 with your file name or sample name
+# Usage: Rscript BamSlam.R rna/cdna yourfile.bam ouputprefix
 
 # GenomicAlignments/Features package is from bioconductor, need to install bioconductor then run:
 # BiocManager::install("GenomicFeatures")
@@ -12,16 +12,16 @@ main <- function() {
   output <- args[3]
   suppressPackageStartupMessages({
     library(GenomicAlignments)
-    library(GenomicFeatures)
-    library(dplyr)
-    library(ggplot2)
-    library(data.table)
+    library(dplyr, warn.conflicts = FALSE)
+    library(tibble)
     library(tidyr)
-    library(MASS)
+    library(ggplot2)
     library(viridis)
     library(zoo)
   })
     
+  options(dplyr.summarise.inform = FALSE)
+  
   # Import bam
   bam <- readGAlignments(bamfile, use.names = TRUE,
                          param = ScanBamParam(tag = c("NM", "AS", "tp"),
@@ -42,10 +42,8 @@ main <- function() {
     dplyr::select(-njunc)
   
   if (type == "cdna") {
-    message("Type is cdna")
     bam_data <- subset(bam_1, flag == 0 | flag == 16 | flag == 256 | flag == 272)
   } else if (type == "rna") {
-    message("Type is rna")
     bam_data <- subset(bam_1, flag == 0 | flag == 256)
   } else {
     print("Sequencing type missing or invalied. Please enter either: cdna rna")
@@ -61,7 +59,7 @@ main <- function() {
     dplyr::select(-isCircular) %>% 
     dplyr::select(-genome) %>% 
     tibble::rownames_to_column("reference")
- 
+  
   # Merge known lengths and calculate transcript coverage
   bam_data <- merge(bam_data, lengths, by.x="seqnames", by.y="reference", all.x=TRUE)
   
@@ -93,7 +91,6 @@ main <- function() {
   # Export files
   bam_export <- subset(bam_data, select=c("qname", "seqnames", "flag", "mapq", "AS", "alignedLength", "readLength", "alignedFraction", "accuracy", "seqlengths", "coverage", "nbrSecondary"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
-  message("Exported data as csv")
   
   bam_primary <- bam_data %>% 
     subset(flag == 0 | flag == 16)
@@ -122,7 +119,7 @@ main <- function() {
   # Make stats
   metric <- c(
     "Number of reads representing full-length transcripts:",
-    "Total primary alignments:",
+    "Out of total primary alignments:",
     "Percentage of reads representing full-length transcripts:",
     "Median coverage fraction of transcripts (primary alignments):",
     "Median accuracy of primary alignments:",
@@ -141,8 +138,6 @@ main <- function() {
   
   bam_primary <- bam_primary %>% 
     dplyr::mutate(above=coverage>0.95)
-  
-  message("Creating plots")
   
   # Histogram of coverage
   pdf(paste0(output, "_coverage_fraction.pdf"), width=6, height=6)
@@ -163,7 +158,7 @@ main <- function() {
     mutate(rolling = rollmean(coverage, 50000, na.pad=TRUE))
   
   # Histogram of coverage vs length
-  pdf(paste0(output, "_density_histogram.pdf"), width=8, height=5)
+  pdf(paste0(output, "_density.pdf"), width=8, height=5)
   plot2 <- ggplot() +
     geom_hex(data=bam_primary, aes(x=seqlengths, y=coverage, fill = stat(log(count))), bins=100) +
     geom_line(data=bam_primary, aes(x=seqlengths, y=rolling), color="lavender", size=0.2) +
@@ -205,5 +200,4 @@ main <- function() {
 }
 
 suppressWarnings(
-main()
-)
+main())
