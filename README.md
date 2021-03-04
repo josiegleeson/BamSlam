@@ -13,7 +13,6 @@ tibble<br>
 data.table<br>
 ggplot2<br>
 viridis <br>
-zoo <br>
 
 ## Usage:
 Download/copy the Rscript from this repository and run it from the terminal as follows: <br>
