@@ -17,6 +17,7 @@ main <- function() {
     library(tidyr)
     library(ggplot2)
     library(viridis)
+    library(hexbin)
   })
     
   options(dplyr.summarise.inform = FALSE)
