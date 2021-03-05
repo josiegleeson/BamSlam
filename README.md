@@ -13,6 +13,7 @@ tibble<br>
 data.table<br>
 ggplot2<br>
 viridis <br>
+hexbin<br>
 
 ## Usage:
 Download/copy the Rscript from this repository and run it from the terminal as follows: <br>
