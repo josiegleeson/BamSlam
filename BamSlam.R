@@ -89,7 +89,7 @@ main <- function() {
   alignments$nbrSecondary <- as.factor(alignments$nbrSecondary)
   
   # Export files
-  bam_export <- subset(bam_data, select=c("qname", "seqnames", "flag", "mapq", "AS", "alignedLength", "readLength", "alignedFraction", "accuracy", "seqlengths", "coverage", "nbrSecondary"))
+  bam_export <- subset(bam_data, select=c("qname", "seqnames", "start", "end", "flag", "mapq", "AS", "alignedLength", "readLength", "alignedFraction", "accuracy", "seqlengths", "coverage", "nbrSecondary"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
   
   bam_primary <- bam_data %>% 
