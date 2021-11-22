@@ -46,7 +46,7 @@ main <- function() {
   } else if (type == "rna") {
     bam_data <- subset(bam_1, flag == 0 | flag == 256)
   } else {
-    print("Sequencing type missing or invalied. Please enter either: cdna rna")
+    print("Sequencing type missing. Please enter either: cdna rna")
   }
   
   bam_data <- bam_data %>% 
