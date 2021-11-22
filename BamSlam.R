@@ -92,8 +92,11 @@ main <- function() {
   bam_export <- subset(bam_data, select=c("qname", "seqnames", "start", "end", "flag", "mapq", "AS", "alignedLength", "readLength", "alignedFraction", "accuracy", "seqlengths", "coverage", "nbrSecondary"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
   
+  # Bam primary is now just the best alignment score per read
   bam_primary <- bam_data %>% 
-    subset(flag == 0 | flag == 16)
+    group_by(qname) %>% 
+    arrange(qname, desc(AS)) %>% 
+    dplyr::slice(n=1)
     
   bam_per_unique_transcript <- bam_primary %>% 
     dplyr::group_by(seqnames) %>% 
