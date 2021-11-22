@@ -192,6 +192,17 @@ main <- function() {
   print(plot4)
   dev.off()
   
+   # Histogram of accuracy
+  pdf(paste0(output, "_accuracy.pdf"), width=6, height=6)
+  plot5 <- ggplot(data=bam_primary, aes(x=accuracy)) +
+    geom_histogram(bins = 180, show.legend = FALSE, fill="steelblue3") +
+    theme_classic(base_size=16) +
+    xlim(0.5,1) +
+    xlab("Accuracy") +
+    ylab("Count")
+  print(plot5)
+  dev.off()
+  
   message("Complete")
   
 }
