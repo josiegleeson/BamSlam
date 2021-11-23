@@ -92,9 +92,10 @@ main <- function() {
   bam_export <- subset(bam_data, select=c("qname", "seqnames", "start", "end", "flag", "mapq", "AS", "alignedLength", "readLength", "alignedFraction", "accuracy", "seqlengths", "coverage", "nbrSecondary"))
   write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
   
-  # Bam primary is now just the best alignment score per read
+  # Select the best AS per read, but prioritise original primary alignment if present
   bam_primary <- bam_data %>% 
     group_by(qname) %>% 
+    arrange(tp) %>% 
     arrange(qname, desc(AS)) %>% 
     dplyr::slice(n=1)
     
