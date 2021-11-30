@@ -19,7 +19,7 @@ main <- function() {
     library(viridis)
     library(hexbin)
   })
-    
+  
   options(dplyr.summarise.inform = FALSE)
   
   # Import bam
@@ -72,7 +72,7 @@ main <- function() {
     tidyr::drop_na(coverage)      
   
   message("Calculated transcript coverages") 
-
+  
   alignments <- bam_data %>% 
     group_by(qname) %>% 
     summarise(nbrSecondary = n()-1) %>% 
@@ -84,7 +84,7 @@ main <- function() {
     group_by(nbrSecondary) %>% 
     summarise(total = n()) %>%
     mutate(prop = total / sum(total))
-    
+  
   bam_data$nbrSecondary <- as.factor(bam_data$nbrSecondary)
   alignments$nbrSecondary <- as.factor(alignments$nbrSecondary)
   
@@ -98,7 +98,7 @@ main <- function() {
     arrange(tp) %>% 
     arrange(qname, desc(AS)) %>% 
     dplyr::slice(n=1)
-    
+  
   bam_per_unique_transcript <- bam_primary %>% 
     dplyr::group_by(seqnames) %>% 
     summarise(coverage = median(coverage, na.rm = TRUE))
@@ -111,33 +111,36 @@ main <- function() {
   
   a <- sum(bam_primary$coverage > 0.95)
   b <- nrow(bam_primary)
-  c <- a/nrow(bam_primary)*100
-  d <- median(bam_primary$coverage)
-  e <- median(bam_primary$accuracy)*100
-  f <- sum(bam_data$nbrSecondary == 0)
-  g <- f/nrow(bam_primary)*100
-  h <- nrow(bam_per_unique_transcript)
-  i <- median(bam_per_unique_transcript$coverage)
-  j <- median(length_per_unique_transcript$seqlengths)
+  c <- median(bam_primary$alignedLength)
+  d <- a/nrow(bam_primary)*100
+  e <- median(bam_primary$coverage)
+  f <- median(bam_primary$accuracy)*100
+  g <- sum(bam_data$nbrSecondary == 0)
+  h <- f/nrow(bam_primary)*100
+  i <- nrow(bam_per_unique_transcript)
+  j <- median(bam_per_unique_transcript$coverage)
+  k <- median(length_per_unique_transcript$seqlengths)
   
   # Make stats
   metric <- c(
-    "Number of reads representing full-length transcripts:",
-    "Out of total number of reads:",
-    "Percentage of reads representing full-length transcripts:",
-    "Median coverage fraction of transcripts (primary alignments):",
-    "Median accuracy of primary alignments:",
-    "Number of reads with no secondary alignments:",
-    "Percentage of reads with no secondary alignments:",
-    "Number of unique transcripts identified:",
-    "Median coverage fraction of all unique transcripts:",
-    "Median length of all unique transcripts identified:") 
+    "Sample",
+    "Number of reads representing full-length transcripts",
+    "Out of total number of reads",
+    "Median alignment length of primary alignments",
+    "Percentage of reads representing full-length transcripts",
+    "Median coverage fraction of transcripts (primary alignments)",
+    "Median accuracy of primary alignments",
+    "Number of reads with no secondary alignments",
+    "Percentage of reads with no secondary alignments",
+    "Number of unique transcripts identified",
+    "Median coverage fraction of all unique transcripts",
+    "Median length of all unique transcripts identified") 
   
-  outcome <- c(a,b,c,d,e,f,g,h,i,j)
+  outcome <- c(output,a,b,c,d,e,f,g,h,i,j,k)
   stats <- data.frame(metric, outcome)
   
   # Export overall stats file
-  write.table(stats, paste0(output, "_stats.txt"), sep="\t", quote=F, row.names=F, col.names=F)
+  write.table(stats, file = paste0(output,"_stats.csv"), sep=",", col.names = FALSE, row.names = FALSE) 
   message("Exported data")
   
   bam_primary <- bam_primary %>% 
@@ -193,14 +196,14 @@ main <- function() {
   print(plot4)
   dev.off()
   
-   # Histogram of accuracy
+  # Histogram of accuracy
   pdf(paste0(output, "_accuracy.pdf"), width=6, height=6)
-  plot5 <- ggplot(data=bam_primary, aes(x=accuracy)) +
-    geom_histogram(bins = 180, show.legend = FALSE, fill="steelblue3") +
+  plot5 <- ggplot(data=bam_primary, aes(x=accuracy, y=..scaled..)) +
+    geom_density(alpha = 0.4, show.legend = FALSE, fill="steelblue3") +
     theme_classic(base_size=16) +
     xlim(0.5,1) +
     xlab("Accuracy") +
-    ylab("Count")
+    ylab("Density")
   print(plot5)
   dev.off()
   
@@ -209,4 +212,4 @@ main <- function() {
 }
 
 suppressWarnings(
-main())
+  main())
