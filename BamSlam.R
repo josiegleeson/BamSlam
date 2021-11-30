@@ -123,7 +123,7 @@ main <- function() {
   # Make stats
   metric <- c(
     "Number of reads representing full-length transcripts:",
-    "Out of total primary alignments:",
+    "Out of total number of reads:",
     "Percentage of reads representing full-length transcripts:",
     "Median coverage fraction of transcripts (primary alignments):",
     "Median accuracy of primary alignments:",
