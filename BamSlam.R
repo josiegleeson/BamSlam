@@ -140,7 +140,7 @@ main <- function() {
   stats <- data.frame(metric, outcome)
   
   # Export overall stats file
-  write.table(stats, file = paste0(output,"_stats.csv"), sep=",", col.names = FALSE, row.names = FALSE) 
+  write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names = FALSE, row.names = FALSE) 
   message("Exported data")
   
   bam_primary <- bam_primary %>% 
