@@ -116,7 +116,7 @@ main <- function() {
   e <- median(bam_primary$coverage)
   f <- median(bam_primary$accuracy)*100
   g <- sum(bam_data$nbrSecondary == 0)
-  h <- f/nrow(bam_primary)*100
+  h <- g/nrow(bam_primary)*100
   i <- nrow(bam_per_unique_transcript)
   j <- median(bam_per_unique_transcript$coverage)
   k <- median(length_per_unique_transcript$seqlengths)
