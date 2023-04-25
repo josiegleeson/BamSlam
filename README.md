@@ -2,21 +2,25 @@
 This script was written for Oxford Nanopore Technologies long-read direct RNA/cDNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output a summary file and plots from your alignment data. This script was used in: https://doi.org/10.1093/nar/gkab1129.
 
 ## Inputs:
-To obtain a BAM file align your FASTQ/FASTA files to the transcriptome with minimap2 (minimap2 -ax map-ont --sam-hit-only). If minimap2 is not run with --sam-hit-only you should remove unmapped reads prior to running BamSlam to avoid slowing it down. You can also input a BAM file output from NanoCount: https://github.com/a-slide/NanoCount.
+To obtain a BAM file align your FASTQ/FASTA files to the transcriptome with minimap2.
+```
+minimap2 -ax map-ont --sam-hit-only transcriptome.fasta input.fastq > alignments.sam
+```
+If minimap2 is not run with --sam-hit-only you should remove unmapped reads prior to running BamSlam to avoid slowing it down. You can also input a BAM file output from NanoCount: https://github.com/a-slide/NanoCount.
 
 ## Prerequisites:
-<b>R packages:</b><br>
-GenomicAlignments (from Bioconductor)<br>
-dplyr<br>
-tidyr<br>
-tibble<br>
-data.table<br>
-ggplot2<br>
-viridis <br>
-hexbin<br>
+<b>R packages:</b>
+GenomicAlignments (Bioconductor)
+dplyr
+tidyr
+tibble
+data.table
+ggplot2
+viridis
+hexbin
 
 ## Usage:
-Download/copy the Rscript from this repository and run it from the terminal as follows: <br>
+Download/copy the Rscript from this repository and run it from the terminal as follows:
 
 ```
 Rscript BamSlam.R [DATA_TYPE] [BAM_FILE] [OUT_PREFIX]
