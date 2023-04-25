@@ -20,18 +20,17 @@ Download/copy the Rscript from this repository and run it from the terminal as f
 
 ```
 Rscript BamSlam.R [DATA_TYPE] [BAM_FILE] [OUT_PREFIX]
-```
+Rscript BamSlam.R rna undiff1_5Y.bam undiff1
 
-```
-DATA_TYPE, Enter either: cdna, rna
-BAM_FILE, A BAM file of alignments to the transcriptome
-OUT_PREF, Output file prefix
+DATA_TYPE, enter either: cdna, rna
+BAM_FILE, a BAM file of alignments to the transcriptome
+OUT_PREF, output file prefix
 ```
 
 ## Outputs:
-- A summary CSV file of metrics such as: percentage of full-length reads, median coverage fractions, median read accuracy, median alignment length, number of transcripts identified, number of reads with no secondary alignments etc. <br>
-- A full-length reads histogram (full-length cutoff/dashed line = 0.95). <br>
-- A histogram density plot of known transcript length vs coverage fractions. <br>
-- A bar chart showing number of secondary alignments. <br>
-- A CSV file of input alignments (primary and secondary) in case further analysis is required. <br>
-- A CSV file summarised to median coverage of unique transcripts identified. <br>
+- A summary CSV file of metrics such as: percentage of full-length reads, median coverage fractions, median read accuracy, median alignment length, number of transcripts identified, number of reads with no secondary alignments etc.
+- A full-length reads histogram (full-length cutoff/dashed line = 0.95). 
+- A histogram density plot of known transcript length vs coverage fractions. 
+- A bar chart showing number of secondary alignments.
+- A CSV file of input alignments (primary and secondary) in case further analysis is required.
+- A CSV file summarised to median coverage of unique transcripts identified.
