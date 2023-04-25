@@ -8,8 +8,8 @@ minimap2 -ax map-ont --sam-hit-only transcriptome.fasta input.fastq > alignments
 ```
 If minimap2 is not run with --sam-hit-only you should remove unmapped reads prior to running BamSlam to avoid slowing it down. You can also input a BAM file output from NanoCount: https://github.com/a-slide/NanoCount.
 
-## Prerequisites:
-<b>R packages:</b>
+## Requirements:
+R packages:
 - GenomicAlignments (Bioconductor)
 - dplyr
 - tidyr
