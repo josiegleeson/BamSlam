@@ -10,14 +10,14 @@ If minimap2 is not run with --sam-hit-only you should remove unmapped reads prio
 
 ## Prerequisites:
 <b>R packages:</b>
-GenomicAlignments (Bioconductor)
-dplyr
-tidyr
-tibble
-data.table
-ggplot2
-viridis
-hexbin
+- GenomicAlignments (Bioconductor)
+- dplyr
+- tidyr
+- tibble
+- data.table
+- ggplot2
+- viridis
+- hexbin
 
 ## Usage:
 Download/copy the Rscript from this repository and run it from the terminal as follows:
