@@ -1,5 +1,5 @@
 # BamSlam
-This script was written for Oxford Nanopore Technologies' direct RNA/cDNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output a statistics file and plots from your alignment data. This script was used in: https://doi.org/10.1093/nar/gkab1129.
+This script was written for Oxford Nanopore Technologies long-read direct RNA/cDNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output a summary file and plots from your alignment data. This script was used in: https://doi.org/10.1093/nar/gkab1129.
 
 ## Inputs:
 To obtain a BAM file align your FASTQ/FASTA files to the transcriptome with minimap2 (minimap2 -ax map-ont --sam-hit-only). If minimap2 is not run with --sam-hit-only you should remove unmapped reads prior to running BamSlam to avoid slowing it down. You can also input a BAM file output from NanoCount: https://github.com/a-slide/NanoCount.
@@ -17,8 +17,16 @@ hexbin<br>
 
 ## Usage:
 Download/copy the Rscript from this repository and run it from the terminal as follows: <br>
-Rscript BamSlam.R data_type bam_file out_prefix <br>
-data_type: rna or cdna <br>
+
+```
+Rscript BamSlam.R [DATA_TYPE] [BAM_FILE] [OUT_PREFIX]
+```
+
+```
+DATA_TYPE, Enter either: cdna, rna
+BAM_FILE, A BAM file of alignments to the transcriptome
+OUT_PREF, Output file prefix
+```
 
 ## Outputs:
 - A summary CSV file of metrics such as: percentage of full-length reads, median coverage fractions, median read accuracy, median alignment length, number of transcripts identified, number of reads with no secondary alignments etc. <br>
