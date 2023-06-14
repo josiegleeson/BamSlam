@@ -97,7 +97,7 @@ main <- function() {
     group_by(qname) %>% 
     arrange(tp) %>% 
     arrange(qname, desc(AS)) %>% 
-    dplyr::slice(n=1)
+    dplyr::slice_head(n=1)
   
   bam_per_unique_transcript <- bam_primary %>% 
     dplyr::group_by(seqnames) %>% 
