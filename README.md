@@ -75,7 +75,7 @@ The script takes approximately 5 minutes per million reads.
 - Percentage of reads representing full-length transcripts
 - Median read coverage fraction (primary alignments)
 - Median alignment length (primary alignments)
-- Median accuracy (primary alignments)
+- Median accuracy (primary alignments) (calculated from CIGAR strings as: (nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD))
 - Number of reads with no secondary alignments
 - Percentage of reads with no secondary alignments
 - Total number of distinct transcripts identified in the data
