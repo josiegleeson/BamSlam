@@ -252,11 +252,6 @@ main <- function() {
   
   options(dplyr.summarise.inform = FALSE)
   
-  # example inputs, these will be entered when script is run
-  #type <- c("rna")
-  #bamfile <- c("~/Documents/DRS_study_2021/Analyses_2020/flair_diu/flair_sep_2021/counts/diff4.bam")
-  #output <- c("test")
-  
   # call functions
   bam_tidy <- import_bam_file(bamfile, type)
   coverages_list_data <- get_read_coverages(bam_tidy, output)
