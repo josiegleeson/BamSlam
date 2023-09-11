@@ -44,7 +44,7 @@ The script takes approximately 5 minutes per million reads.
 - Density plot of the read accuracies.
 
 # Plots
-<img src="[https://github.com/favicon.ico](https://github.com/josiegleeson/BamSlam/assets/30969357/c1d2d5f6-066f-407a-b686-8028e3bd06f3)" width="100" height="100">
+<img src="https://github.com/josiegleeson/BamSlam/assets/30969357/c1d2d5f6-066f-407a-b686-8028e3bd06f3" width="100" height="100">
 ![new_coverage_fraction](https://github.com/josiegleeson/BamSlam/assets/30969357/c1d2d5f6-066f-407a-b686-8028e3bd06f3)
 ![new_transcript_length_distribution](https://github.com/josiegleeson/BamSlam/assets/30969357/a785bcb4-4472-41e8-ad1c-04481ba085f0)
 ![new_density](https://github.com/josiegleeson/BamSlam/assets/30969357/9274dc53-dc61-4cef-8158-cbe5ac89984b)
