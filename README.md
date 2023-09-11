@@ -43,6 +43,13 @@ The script takes approximately 5 minutes per million reads.
 - A bar chart of the secondary alignments.
 - Density plot of the read accuracies.
 
+# Plots
+[new_coverage_fraction.pdf](https://github.com/josiegleeson/BamSlam/files/12571173/new_coverage_fraction.pdf)
+[new_transcript_length_distribution.pdf](https://github.com/josiegleeson/BamSlam/files/12571180/new_transcript_length_distribution.pdf)
+[new_density.pdf](https://github.com/josiegleeson/BamSlam/files/12571174/new_density.pdf)
+[new_sec_alns.pdf](https://github.com/josiegleeson/BamSlam/files/12571181/new_sec_alns.pdf)
+[new_accuracy.pdf](https://github.com/josiegleeson/BamSlam/files/12571183/new_accuracy.pdf)
+
 ## Detailed description of summary file:
 - Total number of reads
 - Number of reads representing full-length transcripts (reads with coverage fractions > 0.95)
