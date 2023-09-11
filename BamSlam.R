@@ -4,132 +4,125 @@
 # GenomicAlignments/Features package is from bioconductor, need to install bioconductor then run:
 # BiocManager::install("GenomicFeatures")
 
-main <- function() {
+# Function for importing BAM file
+import_bam_file <- function(bamfile, type) {
+  bam <- GenomicAlignments::readGAlignments(bamfile, 
+                                            use.names = TRUE,
+                                            param = ScanBamParam(tag = c("NM", "AS", "tp"),
+                                                                 what = c("qname","flag","mapq")))
   
-  args <- commandArgs(trailingOnly = TRUE)
-  type <- args[1]
-  bamfile <- args[2]
-  output <- args[3]
-  suppressPackageStartupMessages({
-    library(GenomicAlignments)
-    library(dplyr, warn.conflicts = FALSE)
-    library(tibble)
-    library(tidyr)
-    library(ggplot2)
-    library(viridis)
-    library(hexbin)
-  })
-  
-  options(dplyr.summarise.inform = FALSE)
-  
-  # Import bam
-  bam <- readGAlignments(bamfile, use.names = TRUE,
-                         param = ScanBamParam(tag = c("NM", "AS", "tp"),
-                                              what = c("qname","flag","mapq")))
   message("Imported bam file")
   
-  # Expand CIGAR strings
-  cigaropts = cigarOpTable(bam@cigar)
+  # Summarise CIGAR strings
+  cigar_table <- cigarOpTable(bam@cigar)
   
-  for (col in colnames(cigaropts)) {
-    mcols(bam)[[paste0("nbr", col)]] = cigaropts[, col]
-  }
+  # CIGAR types 
+  col_names_extract <- c("M", "I", "D", "S", "H")
   
-  message("Expanded CIGAR strings")
+  # Add summarised CIGAR strings
+  mcols(bam)[paste0("nbr", col_names_extract)] <- mapply(function(col) cigar_table[, col], col_names_extract)
   
-  bam_1 <- as.data.frame(bam %>% setNames(NULL), stringsAsFactors = FALSE) %>%
-    dplyr::select(-cigar) %>% 
-    dplyr::select(-njunc)
+  message("Summarised CIGAR strings")
+  
+  bam_1 <- as.data.table(bam %>% setNames(NULL), stringsAsFactors = FALSE) %>%
+    dplyr::select(-cigar, -njunc)
   
   if (type == "cdna") {
-    bam_data <- subset(bam_1, flag == 0 | flag == 16 | flag == 256 | flag == 272)
+    bam_2 <- bam_1[flag %in% c(0,16,256,272), ]
   } else if (type == "rna") {
-    bam_data <- subset(bam_1, flag == 0 | flag == 256)
+    bam_2 <- bam_1[flag %in% c(0,256), ]
   } else {
-    print("Sequencing type missing. Please enter either: cdna rna")
+    message("Sequencing type missing. Please enter either: cdna rna")
   }
   
-  bam_data <- bam_data %>% 
-    dplyr::mutate(alignedLength = nbrM + nbrI) %>% 
-    dplyr::mutate(readLength = nbrS + nbrH + nbrM + nbrI) %>% 
-    dplyr::mutate(alignedFraction = alignedLength/readLength) %>% 
-    dplyr::mutate(accuracy=(nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD))
-  
+  # Extract known mapped isoform lengths
   lengths <- as.data.frame(bam@seqinfo) %>% 
-    dplyr::select(-isCircular) %>% 
-    dplyr::select(-genome) %>% 
-    tibble::rownames_to_column("reference")
+    dplyr::select(-isCircular, -genome) %>% 
+    tibble::rownames_to_column("seqnames")
   
   # Merge known lengths and calculate transcript coverage
-  bam_data <- merge(bam_data, lengths, by.x="seqnames", by.y="reference", all.x=TRUE)
+  bam_data <- left_join(bam_2, lengths, by="seqnames")
+
+  message("Extracted known transcript lengths")
   
+  return(bam_data)
+  
+}
+
+# Function for calculating read coverages
+get_read_coverages <- function(bam_data, output) {
+
   bam_data <- bam_data %>% 
-    dplyr::mutate(coverage=width/seqlengths)
+    dplyr::mutate(aligned_length = nbrM + nbrI,
+                  read_length = nbrS + nbrH + nbrM + nbrI,
+                  aligned_fraction = aligned_length/read_length,
+                  read_accuracy=(nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD),
+                  read_coverage=as.numeric(width/seqlengths)) %>% 
+    tidyr::drop_na(read_coverage) %>% 
+    rename(read_id = qname,
+           transcript_id = seqnames,
+           transcript_length = seqlengths) %>% 
+    group_by(read_id) %>% 
+    mutate(num_secondary_alns = n()-1) %>% ungroup()
   
-  bam_data$coverage <- as.numeric(bam_data$coverage)
-  
-  bam_data <- bam_data %>% 
-    tidyr::drop_na(coverage)      
-  
-  message("Calculated transcript coverages") 
-  
+  # get secondary alignments data
   alignments <- bam_data %>% 
-    group_by(qname) %>% 
-    summarise(nbrSecondary = n()-1) %>% 
-    rename(read = qname)
-  
-  bam_data <- merge(bam_data, alignments, by.x="qname", by.y="read", all.x=TRUE)
-  
-  alignments <- alignments %>% 
-    group_by(nbrSecondary) %>% 
+    group_by(read_id) %>% 
+    slice_head(n=1) %>% ungroup() %>% 
+    group_by(num_secondary_alns) %>% 
     summarise(total = n()) %>%
     mutate(prop = total / sum(total))
   
-  bam_data$nbrSecondary <- as.factor(bam_data$nbrSecondary)
-  alignments$nbrSecondary <- as.factor(alignments$nbrSecondary)
+  message("Calculated read coverages") 
   
-  # Export files
-  bam_export <- subset(bam_data, select=c("qname", "seqnames", "start", "end", "flag", "mapq", "AS", "alignedLength", "readLength", "alignedFraction", "accuracy", "seqlengths", "coverage", "nbrSecondary"))
-  write.csv(bam_export, file = paste0(output, "_data.csv"), sep=",", quote=F, col.names = T, row.names=F) 
+  bam_data$num_secondary_alns <- as.factor(bam_data$num_secondary_alns)
+  alignments$num_secondary_alns <- as.factor(alignments$num_secondary_alns)
   
-  # Select the best AS per read, but prioritise original primary alignment if present
+  bam_export <- bam_data %>% dplyr::select(read_id, transcript_id, start, end, flag, mapq, AS, tp, aligned_length, 
+                                           read_length, aligned_fraction, read_accuracy, transcript_length, read_coverage, num_secondary_alns)
+  write.csv(bam_export, file = paste0(output, "_data.csv"), quote=F, row.names=F) 
+  
+  return(list(bam_data, alignments))
+}
+
+# Function for selecting the best AS per read
+get_alignment_data_and_summarise <- function(bam_data, output) {
   bam_primary <- bam_data %>% 
-    group_by(qname) %>% 
+    group_by(read_id) %>% 
+    # arrange so P is before S
     arrange(tp) %>% 
-    arrange(qname, desc(AS)) %>% 
+    arrange(read_id, desc(AS)) %>% 
     dplyr::slice_head(n=1)
   
   bam_per_unique_transcript <- bam_primary %>% 
-    dplyr::group_by(seqnames) %>% 
-    summarise(coverage = median(coverage, na.rm = TRUE))
+    dplyr::group_by(transcript_id) %>% 
+    summarise(read_coverage = median(read_coverage, na.rm = TRUE),
+              transcript_length = max(transcript_length))
   
-  length_per_unique_transcript <- bam_primary %>% 
-    dplyr::group_by(seqnames) %>% 
-    summarise(seqlengths = max(seqlengths))
+  write.csv(bam_per_unique_transcript, file = paste0(output, "_transcript_level_data.csv"), quote=F, row.names=F)  
   
-  write.csv(bam_per_unique_transcript, file = paste0(output, "_transcript_level_data.csv"), sep=",", quote=F, col.names = T, row.names=F)  
-  
-  a <- sum(bam_primary$coverage > 0.95)
-  b <- nrow(bam_primary)
-  c <- median(bam_primary$alignedLength)
-  d <- a/nrow(bam_primary)*100
-  e <- median(bam_primary$coverage)
-  f <- median(bam_primary$accuracy)*100
-  g <- sum(bam_data$nbrSecondary == 0)
+  # begin stats summary creation
+  a <- nrow(bam_primary)
+  b <- sum(bam_primary$read_coverage > 0.95)
+  c <- b/nrow(bam_primary)*100
+  d <- median(bam_primary$read_coverage)
+  e <- median(bam_primary$aligned_length)
+  f <- median(bam_primary$read_accuracy)*100
+  g <- sum(bam_data$num_secondary_alns == 0)
   h <- g/nrow(bam_primary)*100
   i <- nrow(bam_per_unique_transcript)
-  j <- median(bam_per_unique_transcript$coverage)
-  k <- median(length_per_unique_transcript$seqlengths)
+  j <- median(bam_per_unique_transcript$read_coverage)
+  k <- median(bam_per_unique_transcript$transcript_length)
   
   # Make stats
   metric <- c(
     "Sample",
+    "Total number of reads",
     "Number of reads representing full-length transcripts",
-    "Out of total number of reads",
-    "Median alignment length of primary alignments",
     "Percentage of reads representing full-length transcripts",
     "Median coverage fraction of transcripts (primary alignments)",
-    "Median accuracy of primary alignments",
+    "Median alignment length (primary alignments)",
+    "Median accuracy (primary alignments)",
     "Number of reads with no secondary alignments",
     "Percentage of reads with no secondary alignments",
     "Number of unique transcripts identified",
@@ -143,69 +136,142 @@ main <- function() {
   write.table(stats, file = paste0(output,"_stats.csv"), sep=",", quote=F, col.names = FALSE, row.names = FALSE) 
   message("Exported data")
   
+  return(bam_primary)
+
+}
+
+# Function for plotting coverage
+plot_coverage <- function(bam_primary, output) {
   bam_primary <- bam_primary %>% 
-    dplyr::mutate(above=coverage>0.95)
+    dplyr::mutate(above=read_coverage>0.95)
   
-  # Histogram of coverage
   pdf(paste0(output, "_coverage_fraction.pdf"), width=6, height=6)
-  plot1 <- ggplot(data=bam_primary, aes(x=coverage, fill=above)) +
+  plot <- ggplot(data=bam_primary, aes(x=read_coverage, fill=above)) +
     geom_histogram(bins = 180, show.legend = FALSE) +
-    geom_vline(aes(xintercept=0.95), color="black", linetype="dashed", size=0.5) +
+    geom_vline(aes(xintercept=0.95), color="black", linetype="dashed", linewidth=0.5) +
     xlim(0.5,1) +
-    theme_classic(base_size=16) +
-    xlab("Coverage Fraction") +
-    ylab("Count") +
+    theme_bw(base_size=14) +
+    xlab("Coverage fraction") +
+    ylab("Number of reads") +
     scale_fill_manual(values = c("gray", "steelblue3"))
-  print(plot1)
+  suppressMessages(print(plot))
   dev.off()
-  
-  # Histogram of coverage vs length
+}
+
+# Function for plotting coverage vs length
+plot_coverage_vs_length <- function(bam_primary, output) {
   pdf(paste0(output, "_density.pdf"), width=8, height=5)
-  plot2 <- ggplot() +
-    geom_hex(data=bam_primary, aes(x=seqlengths, y=coverage, fill = stat(log(count))), bins=100) +
-    stat_smooth(data=bam_primary, aes(x=seqlengths, y=coverage), color="lavender", se=TRUE, size=0.5, level=0.95) +
+  plot <- ggplot() +
+    geom_hex(data=bam_primary, aes(x=transcript_length, y=read_coverage, fill = after_stat(log(count))), bins=100) +
+    stat_smooth(data=bam_primary, aes(x=transcript_length, y=read_coverage), color="lavender", se=TRUE, size=0.5, level=0.95) +
     xlim(0,15000) +
     ylim(0,1) +
-    xlab("Known Transcript Length") +
-    ylab("Coverage Fraction") +
+    xlab("Known transcript length (nt)") +
+    ylab("Coverage fraction") +
     scale_fill_viridis_c() + 
-    theme_classic(base_size=16)
-  print(plot2)
+    theme_bw(base_size=14)
+  suppressMessages(print(plot))
   dev.off()
-  
-  # Secondary alignments bar chart
+}
+
+# Function for plotting secondary alignments
+plot_secondary_alignments <- function(alignments, output) {
   pdf(paste0(output, "_sec_alns.pdf"), width=8, height=5)
-  plot3 <- ggplot(alignments) +
-    geom_bar(stat='identity', aes(x=nbrSecondary, y=prop), fill = "steelblue3") +
-    xlab("Number of Secondary Alignments") +
-    ylab("Proportion of Reads") +
+  plot <- ggplot(alignments) +
+    geom_bar(stat='identity', aes(x=num_secondary_alns, y=prop), fill = "steelblue3") +
+    xlab("Number of secondary alignments") +
+    ylab("Proportion of reads") +
     ylim(0,1) +
-    scale_x_discrete(breaks = alignments$nbrSecondary, labels = alignments$nbrSecondary) +
-    theme_classic(base_size=16) 
-  print(plot3)
+    scale_x_discrete(breaks = alignments$num_secondary_alns, labels = alignments$num_secondary_alns) +
+    theme_bw(base_size=14) 
+  suppressMessages(print(plot))
   dev.off() 
+}
+
+# Function for plotting transcript length distribution
+plot_transcript_length_distribution <- function(bam_primary, output) {
   
-  # Histogram unqiue transcript lengths
-  pdf(paste0(output, "_transcript_length_distribution.pdf"), width=6, height=6)
-  plot4 <- ggplot(data=length_per_unique_transcript, aes(x=seqlengths)) +
+  length_per_unique_transcript <- bam_primary %>% 
+    dplyr::group_by(transcript_id) %>% 
+    slice_head(n=1)
+  
+  pdf(paste0(output, "_transcript_length_distribution_per_distinct_transcript.pdf"), width=6, height=6)
+  plot <- ggplot(data=length_per_unique_transcript, aes(x=transcript_length)) +
     geom_histogram(bins = 180, show.legend = FALSE, fill="steelblue3") +
-    theme_classic(base_size=16) +
+    theme_bw(base_size=14) +
     xlim(0,10000) +
-    xlab("Known Transcript Length") +
-    ylab("Count")
-  print(plot4)
+    xlab("Known transcript length (nt)") +
+    ylab("Transcript count")
+  suppressMessages(print(plot))
   dev.off()
   
-  # Histogram of accuracy
-  pdf(paste0(output, "_accuracy.pdf"), width=6, height=6)
-  plot5 <- ggplot(data=bam_primary, aes(x=accuracy, y=..scaled..)) +
-    geom_density(alpha = 0.4, show.legend = FALSE, fill="steelblue3") +
-    theme_classic(base_size=16) +
-    xlim(0.5,1) +
-    xlab("Accuracy") +
-    ylab("Density")
-  print(plot5)
+  pdf(paste0(output, "_transcript_length_distribution_per_read.pdf"), width=6, height=6)
+  plot <- ggplot(data=bam_primary, aes(x=transcript_length)) +
+    geom_histogram(bins = 180, show.legend = FALSE, fill="steelblue3") +
+    theme_bw(base_size=14) +
+    xlim(0,10000) +
+    xlab("Known transcript length (nt)") +
+    ylab("Read count")
+  suppressMessages(print(plot))
   dev.off()
+  
+}
+
+# Function for plotting accuracy
+plot_accuracy <- function(bam_primary, output) {
+  pdf(paste0(output, "_read_accuracy.pdf"), width=6, height=6)
+  plot <- ggplot(data=bam_primary, aes(x=read_accuracy, y=after_stat(scaled))) +
+    geom_density(alpha = 0.4, show.legend = FALSE, fill="steelblue3") +
+    theme_bw(base_size=14) +
+    xlim(0.5,1) +
+    xlab("Read accuracy") +
+    ylab("Density")
+  suppressMessages(print(plot))
+  dev.off()
+}
+
+# main function
+main <- function() {
+ 
+  # inputs from command line
+  args <- commandArgs(trailingOnly = TRUE)
+  type <- args[1]
+  bamfile <- args[2]
+  output <- args[3]
+  
+  suppressPackageStartupMessages({
+    library(GenomicAlignments)
+    library(dplyr, warn.conflicts = FALSE)
+    library(tibble)
+    library(tidyr)
+    library(ggplot2)
+    library(viridis)
+    library(hexbin)
+    library(data.table)
+  })
+  
+  options(dplyr.summarise.inform = FALSE)
+  
+  # example inputs, these will be entered when script is run
+  #type <- c("rna")
+  #bamfile <- c("~/Documents/DRS_study_2021/Analyses_2020/flair_diu/flair_sep_2021/counts/diff4.bam")
+  #output <- c("test")
+  
+  # call functions
+  bam_tidy <- import_bam_file(bamfile, type)
+  coverages_list_data <- get_read_coverages(bam_tidy, output)
+  
+  bam_data <- coverages_list_data[[1]]
+  alignments <- coverages_list_data[[2]]
+  
+  bam_primary <- get_alignment_data_and_summarise(bam_data, output)
+  
+  # plotting functions
+  plot_coverage(bam_data, output)
+  plot_coverage_vs_length(bam_data, output)
+  plot_secondary_alignments(alignments, output)
+  plot_transcript_length_distribution(bam_primary, output)
+  plot_accuracy(bam_data, output)
   
   message("Complete")
   
