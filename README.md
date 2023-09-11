@@ -48,7 +48,8 @@ The script takes approximately 5 minutes per million reads.
 ![new_transcript_length_distribution.pdf](https://github.com/josiegleeson/BamSlam/files/12571180/new_transcript_length_distribution.pdf)
 ![new_density.pdf](https://github.com/josiegleeson/BamSlam/files/12571174/new_density.pdf)
 ![new_sec_alns.pdf](https://github.com/josiegleeson/BamSlam/files/12571181/new_sec_alns.pdf)
-![new_accuracy.pdf](https://github.com/josiegleeson/BamSlam/files/12571183/new_accuracy.pdf)
+![new_accuracy](https://github.com/josiegleeson/BamSlam/assets/30969357/dacb422b-a6aa-44e9-a122-7b2577c52019)
+
 
 ## Detailed description of summary file:
 - Total number of reads
