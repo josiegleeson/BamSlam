@@ -44,13 +44,11 @@ The script takes approximately 5 minutes per million reads.
 - Density plot of the read accuracies.
 
 # Plots
-![new_coverage_fraction.pdf](https://github.com/josiegleeson/BamSlam/files/12571173/new_coverage_fraction.pdf)
-![new_transcript_length_distribution.pdf](https://github.com/josiegleeson/BamSlam/files/12571180/new_transcript_length_distribution.pdf)
-![new_density.pdf](https://github.com/josiegleeson/BamSlam/files/12571174/new_density.pdf)
-![new_sec_alns.pdf](https://github.com/josiegleeson/BamSlam/files/12571181/new_sec_alns.pdf)
-<img
-  src="[new_accuracy.jpg](https://github.com/josiegleeson/BamSlam/assets/30969357/dacb422b-a6aa-44e9-a122-7b2577c52019)"
-  style="display: inline-block; margin: 0 auto; max-width: 100px">
+![new_coverage_fraction](https://github.com/josiegleeson/BamSlam/assets/30969357/c1d2d5f6-066f-407a-b686-8028e3bd06f3)
+![new_transcript_length_distribution](https://github.com/josiegleeson/BamSlam/assets/30969357/a785bcb4-4472-41e8-ad1c-04481ba085f0)
+![new_density](https://github.com/josiegleeson/BamSlam/assets/30969357/9274dc53-dc61-4cef-8158-cbe5ac89984b)
+![new_sec_alns](https://github.com/josiegleeson/BamSlam/assets/30969357/2634921a-d755-48da-91ec-39966e0de4a6)
+![new_accuracy](https://github.com/josiegleeson/BamSlam/assets/30969357/5047fa9f-ac44-45a5-9c29-8fccfffad3dd)
 
 
 ## Detailed description of summary file:
