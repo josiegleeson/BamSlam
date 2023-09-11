@@ -1,14 +1,15 @@
 # BamSlam
-This script was written for Oxford Nanopore Technologies long-read direct RNA/cDNA sequencing data produced after mapping with minimap2 to the reference transcriptome. It will output a summary file and plots from your alignment data. This script was used in: https://doi.org/10.1093/nar/gkab1129.
+This script was written for long-read Oxford Nanopore Technologies direct RNA/cDNA sequencing data. It uses BAM files produced after mapping with minimap2 to the reference transcriptome. It will output a summary file and plots from your aligned reads. This script was used in: https://doi.org/10.1093/nar/gkab1129.
 
 ## Inputs:
 To obtain a BAM file align your FASTQ/FASTA files to the transcriptome with minimap2.
 ```
-minimap2 -ax map-ont --sam-hit-only transcriptome.fasta input.fastq > alignments.sam
+minimap2 -ax map-ont --sam-hit-only transcriptome.fasta reads.fastq | samtools view -bh > aligned_reads.bam
 ```
 If minimap2 is not run with --sam-hit-only you should remove unmapped reads prior to running BamSlam to avoid slowing it down. You can also input a BAM file output from NanoCount: https://github.com/a-slide/NanoCount.
 
 ## Requirements:
+R (tested with v4.2.2)
 R packages:
 - GenomicAlignments (Bioconductor)
 - dplyr
@@ -30,11 +31,29 @@ DATA_TYPE, enter either: cdna, rna
 BAM_FILE, a BAM file of alignments to the transcriptome
 OUT_PREF, output file prefix
 ```
+The script takes approximately 5 minutes per million reads.
 
 ## Outputs:
-- A summary CSV file of metrics such as: percentage of full-length reads, median coverage fractions, median read accuracy, median alignment length, number of transcripts identified, number of reads with no secondary alignments etc.
-- A full-length reads histogram (full-length cutoff/dashed line = 0.95). 
+- A summary CSV file of your alignments.
+- A CSV file of all input alignments (primary and secondary) for downstream analysis.
+- A CSV file of each unique transcript identified in the data with its corresponding median read coverage.
+- A histogram of read coverages (full-length reads cutoff/dashed line = 0.95).
+- A histogram of known transcript lengths and the number of reads assigned. 
 - A histogram density plot of known transcript length vs coverage fractions. 
-- A bar chart showing number of secondary alignments.
-- A CSV file of input alignments (primary and secondary) in case further analysis is required.
-- A CSV file summarised to median coverage of unique transcripts identified.
+- A bar chart of the secondary alignments.
+- Density plot of the read accuracies.
+
+## Detailed description of summary file:
+- Total number of reads
+- Number of reads representing full-length transcripts (reads with coverage fractions > 0.95)
+- Percentage of reads representing full-length transcripts
+- Median read coverage fraction (primary alignments)
+- Median alignment length (primary alignments)
+- Median accuracy (primary alignments)
+- Number of reads with no secondary alignments
+- Percentage of reads with no secondary alignments
+- Total number of distinct transcripts identified in the data
+- Median coverage fraction of all unique transcripts (median value of the median read coverages per transcript)
+- Median length of all unique transcripts identified (median length in nt of the annotated length of transcripts identified)
+
+
