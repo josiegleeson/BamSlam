@@ -53,10 +53,10 @@ The script takes approximately 5 minutes per million reads.
 
      <img src="https://github.com/josiegleeson/BamSlam/assets/30969357/a785bcb4-4472-41e8-ad1c-04481ba085f0" width="300" height="300">
 
-[new_reads_known_transcript_lengths_distribution.pdf](https://github.com/josiegleeson/BamSlam/files/12572004/new_reads_known_transcript_lengths_distribution.pdf)
+
 - Histogram of known transcript lengths (per read):
 
-     <img src="https://github.com/josiegleeson/BamSlam/files/12571999/new_reads_known_transcript_lengths_distribution.pdf" width="300" height="300">
+     <img src="https://github.com/josiegleeson/BamSlam/assets/30969357/b9830952-e39c-4b38-8bf5-13ec52b09579" width="300" height="300">
 
 
 - Histogram density plot of known transcript length vs coverage fractions:
