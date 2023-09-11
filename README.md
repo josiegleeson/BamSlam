@@ -68,7 +68,7 @@ The script takes approximately 5 minutes per million reads.
      <img src="https://github.com/josiegleeson/BamSlam/assets/30969357/5047fa9f-ac44-45a5-9c29-8fccfffad3dd" width="300" height="300">
 
 
-### Detailed description of summary file:
+### Details of summary file metrics
 
 - Total number of reads
 - Number of reads representing full-length transcripts (reads with coverage fractions > 0.95)
