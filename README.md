@@ -44,11 +44,11 @@ The script takes approximately 5 minutes per million reads.
 - Density plot of the read accuracies.
 
 # Plots
-[new_coverage_fraction.pdf](https://github.com/josiegleeson/BamSlam/files/12571173/new_coverage_fraction.pdf)
-[new_transcript_length_distribution.pdf](https://github.com/josiegleeson/BamSlam/files/12571180/new_transcript_length_distribution.pdf)
-[new_density.pdf](https://github.com/josiegleeson/BamSlam/files/12571174/new_density.pdf)
-[new_sec_alns.pdf](https://github.com/josiegleeson/BamSlam/files/12571181/new_sec_alns.pdf)
-[new_accuracy.pdf](https://github.com/josiegleeson/BamSlam/files/12571183/new_accuracy.pdf)
+![new_coverage_fraction.pdf](https://github.com/josiegleeson/BamSlam/files/12571173/new_coverage_fraction.pdf)
+![new_transcript_length_distribution.pdf](https://github.com/josiegleeson/BamSlam/files/12571180/new_transcript_length_distribution.pdf)
+![new_density.pdf](https://github.com/josiegleeson/BamSlam/files/12571174/new_density.pdf)
+![new_sec_alns.pdf](https://github.com/josiegleeson/BamSlam/files/12571181/new_sec_alns.pdf)
+![new_accuracy.pdf](https://github.com/josiegleeson/BamSlam/files/12571183/new_accuracy.pdf)
 
 ## Detailed description of summary file:
 - Total number of reads
