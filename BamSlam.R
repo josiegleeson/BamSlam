@@ -2,7 +2,7 @@
 # Usage: Rscript BamSlam.R rna/cdna yourfile.bam ouputprefix
 
 # GenomicAlignments/Features package is from bioconductor, need to install bioconductor then run:
-# BiocManager::install("GenomicFeatures")
+# BiocManager::install("GenomicAlignments")
 
 # Function for importing BAM file
 import_bam_file <- function(bamfile, type) {
