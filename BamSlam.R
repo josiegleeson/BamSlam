@@ -59,7 +59,7 @@ get_read_coverages <- function(bam_data, output) {
                   read_accuracy=(nbrM+nbrI+nbrD-NM)/(nbrM+nbrI+nbrD),
                   read_coverage=as.numeric(width/seqlengths)) %>% 
     tidyr::drop_na(read_coverage) %>% 
-    rename(read_id = qname,
+    dplyr::rename(read_id = qname,
            transcript_id = seqnames,
            transcript_length = seqlengths) %>% 
     group_by(read_id) %>% 
